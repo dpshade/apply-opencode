@@ -495,3 +495,286 @@
   transform: none;
   box-shadow: none;
 }
+
+/* FILE CREATE MODAL */
+.modal.apply-opencode-file-create {
+  width: 500px;
+  max-width: 90vw;
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--background-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal.apply-opencode-file-create .modal-close-button {
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background: var(--background-secondary);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.modal.apply-opencode-file-create .modal-close-button:hover {
+  opacity: 1;
+  background: var(--background-modifier-hover);
+}
+
+.modal.apply-opencode-file-create .modal-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.file-create-header {
+  padding: 24px 24px 20px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.file-create-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--background-primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--interactive-accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  flex-shrink: 0;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.file-create-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.file-create-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-create-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-normal);
+}
+
+.file-create-title p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Body */
+.file-create-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.file-create-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-create-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 2px;
+}
+
+/* Description Input */
+.file-create-description {
+  width: 100%;
+  resize: none;
+  padding: 12px 14px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-family: var(--font-text);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-normal);
+}
+
+.file-create-description:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  outline: none;
+}
+
+/* Location & Name */
+.file-create-filename-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Folder Picker */
+.file-create-folder-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-normal);
+  user-select: none;
+}
+
+.file-create-folder-picker:hover {
+  border-color: var(--text-muted);
+  background: var(--background-primary);
+}
+
+.file-create-folder-icon {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.file-create-folder-path {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl; /* Truncate from left */
+  text-align: left;
+}
+
+.file-create-folder-arrow {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* Filename Input */
+.file-create-filename-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.file-create-filename-input {
+  width: 100%;
+  padding: 10px 12px;
+  padding-right: 60px; /* Space for extension */
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+}
+
+.file-create-filename-input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  outline: none;
+}
+
+.file-create-extension {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 13px;
+  pointer-events: none;
+  background: var(--background-primary-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Footer */
+.file-create-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: var(--background-secondary);
+}
+
+.file-create-footer button {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  height: 36px;
+  font-size: 14px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.file-create-btn-cancel {
+  background: transparent;
+  border-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.file-create-btn-cancel:hover {
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+}
+
+.file-create-btn-create {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.file-create-btn-create:hover {
+  background: var(--interactive-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.file-create-btn-create:active {
+  transform: translateY(0);
+}
+
+/* Type specific accents */
+.apply-opencode-file-create[data-type="base"] .file-create-icon {
+  color: var(--color-purple);
+  border-color: rgba(var(--color-purple-rgb), 0.2);
+}
+
+.apply-opencode-file-create[data-type="canvas"] .file-create-icon {
+  color: var(--color-orange);
+  border-color: rgba(var(--color-orange-rgb), 0.2);
+}
