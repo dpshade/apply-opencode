@@ -260,14 +260,26 @@ export default class ApplyOpenCodePlugin extends Plugin {
             return;
           }
 
-          if (hasSelection) {
-            // Replace selection
-            editor.replaceSelection(generated);
+          // Build the proposed content with the generated text inserted/replaced
+          const proposedContent = textBefore + generated + textAfter;
+          
+          // Show diff modal for review
+          const result = await showContentDiffModal(
+            this.app,
+            content,
+            proposedContent,
+            this.settings.diffStyle,
+            hasSelection ? "Review generated replacement" : "Review generated content"
+          );
+
+          if (result === null) {
+            new Notice("No changes to apply.", 5000);
+          } else if (result.applied) {
+            editor.setValue(result.modifiedContent);
+            new Notice(`Applied generated content (${generated.length} chars)`, 5000);
           } else {
-            // Insert at cursor position
-            editor.replaceRange(generated, editor.getCursor());
+            new Notice("Changes discarded.", 5000);
           }
-          new Notice(`Generated ${generated.length} characters`, 5000);
         } catch (err) {
           loadingNotice.hide();
           const message = err instanceof Error ? err.message : String(err);
