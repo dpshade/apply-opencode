@@ -1,9 +1,9 @@
 {
   "id": "apply-opencode",
   "name": "Apply OpenCode",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.0.0",
-  "description": "AI-powered frontmatter enhancement and title generation for Obsidian.",
+  "description": "AI-powered frontmatter enhancement, title generation, and content generation for Obsidian.",
   "author": "Dylan Shade",
   "authorUrl": "https://github.com/dpshade",
   "fundingUrl": "https://ko-fi.com/dpshade",
