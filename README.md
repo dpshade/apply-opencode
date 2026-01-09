@@ -22,6 +22,14 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 - Uses note title, frontmatter, and surrounding context for relevance
 - Optional instruction to guide generation (e.g., "summarize", "expand", "add examples")
 
+### Wiki Link Identification
+- Identify entities in notes that should become wiki links
+- Two strategies: existing notes only (instant) or all entities via AI
+- Configurable mode: first mention only or all mentions
+- Shows diff preview before applying changes
+- Smart selection handling: processes selection if present, otherwise full note
+- Safety guaranteed: only adds `[[` and `]]` brackets, never modifies content
+
 ## Installation
 
 ### Using BRAT (Recommended)
@@ -61,6 +69,13 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 3. Optionally type an instruction (e.g., "add a conclusion"), or leave empty for natural continuation
 4. Press **Enter** to generate
 
+### Identify Wiki Links
+1. Open a note (optionally select specific text)
+2. Run command: **Apply OpenCode: Identify and add wiki links**
+3. Review the diff showing proposed wiki links
+4. Click on any green line to remove that link
+5. Click "Apply changes" to add the wiki links
+
 ### Bulk Operations (Settings)
 - **Bulk rename untitled files** - Rename all files with "Untitled" in the name
 - **Bulk enhance frontmatter** - Add frontmatter to all files missing it
@@ -73,6 +88,9 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 | Executable path | Path to opencode CLI |
 | Diff view style | Side-by-side or unified diff |
 | Max list items | Limit for array properties (tags, etc.) |
+| Note search mode | Algorithm (top 5 scored) or Semantic (all titles) |
+| Wiki link strategy | Existing notes only (fast) or All entities via AI (slow) |
+| Wiki link mode | First mention only or All mentions |
 | Ignored properties | Properties AI should never modify |
 | Custom prompt | Additional instructions for enhancement |
 | Confirm before rename | Show modal before title rename |

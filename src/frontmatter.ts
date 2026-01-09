@@ -52,6 +52,35 @@ export function mergeFrontmatter(existing: FrontmatterData, enhanced: Frontmatte
   return merged;
 }
 
+/**
+ * Order frontmatter properties according to a specified order.
+ * Properties in the order array come first (in that order),
+ * followed by any remaining properties in their original order.
+ */
+export function orderFrontmatter(frontmatter: FrontmatterData, propertyOrder: string[]): FrontmatterData {
+  if (!propertyOrder || propertyOrder.length === 0) {
+    return frontmatter;
+  }
+
+  const ordered: FrontmatterData = {};
+  const remaining = new Set(Object.keys(frontmatter));
+
+  // First, add properties in the specified order
+  for (const key of propertyOrder) {
+    if (key in frontmatter) {
+      ordered[key] = frontmatter[key];
+      remaining.delete(key);
+    }
+  }
+
+  // Then, add any remaining properties not in the order list
+  for (const key of remaining) {
+    ordered[key] = frontmatter[key];
+  }
+
+  return ordered;
+}
+
 export function buildContent(frontmatter: FrontmatterData, body: string): string {
   const yamlContent = stringifyYaml(frontmatter).trim();
   return `---\n${yamlContent}\n---\n${body}`;

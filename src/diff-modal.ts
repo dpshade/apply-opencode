@@ -208,7 +208,9 @@ export class DiffModal extends Modal {
 }
 
 export function frontmatterToYaml(data: FrontmatterData): string {
-  return stringifyYaml(data).trim();
+  // Ensure trailing newline to avoid "No newline at end of file" in diff
+  const yaml = stringifyYaml(data).trim();
+  return yaml + "\n";
 }
 
 export async function showDiffModal(
