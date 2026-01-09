@@ -1,6 +1,6 @@
 # Apply OpenCode
 
-AI-powered frontmatter enhancement and title generation for Obsidian, using [OpenCode](https://opencode.ai) CLI.
+AI-powered note enhancement for Obsidian, using [OpenCode](https://opencode.ai) CLI.
 
 ## Features
 
@@ -17,8 +17,8 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 - Bulk rename all "Untitled" files at once
 
 ### Content Generation
-- Generate 500-1000 characters at cursor position
-- Select text to replace it with AI-generated content
+- Select text to edit/replace it with AI-generated content
+- Or place cursor to append content at that position
 - Uses note title, frontmatter, and surrounding context for relevance
 - Optional instruction to guide generation (e.g., "summarize", "expand", "add examples")
 
@@ -29,6 +29,24 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 - Shows diff preview before applying changes
 - Smart selection handling: processes selection if present, otherwise full note
 - Safety guaranteed: only adds `[[` and `]]` brackets, never modifies content
+
+### Base File Generation
+- Create Obsidian Base files (.base) from natural language descriptions
+- Edit existing Base files with AI assistance
+- Uses vault context (folders, tags, properties) for accurate references
+- Includes examples from your existing .base files
+
+### Canvas Generation
+- Create JSON Canvas files (.canvas) from natural language descriptions
+- Edit existing Canvas files with AI assistance
+- Smart layout rules prevent overlapping nodes
+- Uses vault context for accurate file/folder references
+
+### Weekly Summary
+- Analyze all notes created or modified in the past 7 days
+- Generates insights on themes, progress, connections, and open threads
+- Creates a new summary note with reflection prompts
+- Includes activity statistics by tag, folder, and day
 
 ## Installation
 
@@ -63,10 +81,10 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 2. Click the brain icon in the ribbon, or run command: **Apply OpenCode: Generate AI title for current file**
 3. File is renamed based on content
 
-### Generate Content
-1. Place cursor where you want content, or select text to replace
-2. Run command: **Apply OpenCode: Generate content at cursor**
-3. Optionally type an instruction (e.g., "add a conclusion"), or leave empty for natural continuation
+### Edit or Append Content
+1. Select text to replace, or place cursor where you want content
+2. Run command: **Apply OpenCode: Edit or append content at selection**
+3. Optionally type an instruction (e.g., "add a conclusion"), or leave empty
 4. Press **Enter** to generate
 
 ### Identify Wiki Links
@@ -75,6 +93,23 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 3. Review the diff showing proposed wiki links
 4. Click on any green line to remove that link
 5. Click "Apply changes" to add the wiki links
+
+### Create Base File
+1. Run command: **Apply OpenCode: Create Obsidian base**
+2. Describe what you want (e.g., "tasks not in Archive folder, grouped by status")
+3. Choose folder and filename
+4. Review and save
+
+### Create Canvas
+1. Run command: **Apply OpenCode: Create canvas**
+2. Describe what you want (e.g., "project roadmap with phases")
+3. Choose folder and filename
+4. Review and save
+
+### Weekly Summary
+1. Run command: **Apply OpenCode: This week's summary**
+2. Wait for analysis of recent notes
+3. New summary note opens with insights
 
 ### Bulk Operations (Settings)
 - **Bulk rename untitled files** - Rename all files with "Untitled" in the name

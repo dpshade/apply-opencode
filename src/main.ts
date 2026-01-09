@@ -228,7 +228,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     // Content generation command
     this.addCommand({
       id: "generate-content",
-      name: "Generate content at cursor",
+      name: "Edit or append content at selection",
       editorCallback: async (editor, view) => {
         if (!(view instanceof MarkdownView)) {
           new Notice("No active Markdown file", 8000);
