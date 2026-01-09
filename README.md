@@ -1,30 +1,70 @@
-# Auto Frontmatter
+# Apply OpenCode
 
-Automatically manage and update frontmatter in your Obsidian notes.
+AI-powered frontmatter enhancement and title generation for Obsidian, using [OpenCode](https://opencode.ai) CLI.
 
 ## Features
 
-- Automatic frontmatter management
-- Configurable settings
+### Frontmatter Enhancement
+- Analyzes note content and suggests frontmatter improvements
+- Learns from similar notes in your vault to match your existing schema
+- Shows diff preview before applying changes
+- Never removes existing values - only adds or extends
+
+### AI Title Generation
+- Generate meaningful 2-5 word titles from note content
+- Ribbon icon for quick access
+- Optional confirmation modal before rename
+- Bulk rename all "Untitled" files at once
 
 ## Installation
 
-### From Community Plugins
-
-1. Open Settings > Community plugins
-2. Search for "Auto Frontmatter"
-3. Click Install, then Enable
-
 ### Manual Installation
 
-1. Download `main.js` and `manifest.json` from the latest release
-2. Create a folder `auto-frontmatter` in your vault's `.obsidian/plugins/` directory
-3. Copy the downloaded files into the folder
-4. Reload Obsidian and enable the plugin
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
+2. Create folder `.obsidian/plugins/apply-opencode/` in your vault
+3. Copy downloaded files into the folder
+4. Reload Obsidian and enable the plugin in Settings > Community plugins
+
+### Requirements
+
+- [OpenCode CLI](https://opencode.ai) installed and configured
+- Default path: `~/.opencode/bin/opencode`
 
 ## Usage
 
-Configure the plugin in Settings > Auto Frontmatter.
+### Enhance Frontmatter
+1. Open a note
+2. Run command: **Apply OpenCode: Enhance note frontmatter**
+3. Review diff and apply changes
+
+### Generate Title
+1. Open a note
+2. Click the brain icon in the ribbon, or run command: **Apply OpenCode: Generate AI title for current file**
+3. File is renamed based on content
+
+### Bulk Operations (Settings)
+- **Bulk rename untitled files** - Rename all files with "Untitled" in the name
+- **Bulk enhance frontmatter** - Add frontmatter to all files missing it
+
+## Settings
+
+| Setting | Description |
+|---------|-------------|
+| Model | OpenCode model for AI operations |
+| Executable path | Path to opencode CLI |
+| Diff view style | Side-by-side or unified diff |
+| Max list items | Limit for array properties (tags, etc.) |
+| Ignored properties | Properties AI should never modify |
+| Custom prompt | Additional instructions for enhancement |
+| Confirm before rename | Show modal before title rename |
+
+## How It Works
+
+1. **Find similar notes** - Scores all notes with frontmatter by superset matching, links, tags, folder, recency
+2. **Extract schema** - Builds list of valid properties from top 5 similar notes
+3. **Generate enhancement** - Sends note + examples to OpenCode, requests YAML frontmatter
+4. **Merge carefully** - Adds new properties, extends arrays, never overwrites existing values
+5. **Review & apply** - Shows diff modal for user approval
 
 ## License
 

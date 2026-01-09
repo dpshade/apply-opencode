@@ -1,6 +1,28 @@
 import { App, TFile } from "obsidian";
 import { parseFrontmatter, FrontmatterData } from "./frontmatter";
 
+/** Scoring weights for similar note detection */
+const SCORE = {
+  BASE_HAS_FRONTMATTER: 5,
+  SAME_FOLDER: 3,
+  SUBFOLDER: 1,
+  PER_TAG_OVERLAP: 4,
+  LINK_CONNECTION: 8,
+  SUPERSET_BASE: 10,
+  PER_EXTRA_PROP: 2,
+  PER_SHARED_PROP: 2,
+  RICHNESS_CAP: 5,
+  RECENT_7_DAYS: 2,
+  RECENT_30_DAYS: 1,
+} as const;
+
+const DAYS = {
+  RECENT: 7,
+  MODERATE: 30,
+} as const;
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 export interface SimilarNote {
   path: string;
   frontmatter: FrontmatterData;
@@ -15,41 +37,77 @@ export async function findSimilarNotes(
   const files = app.vault.getMarkdownFiles();
   const currentFolder = currentFile.parent?.path || "";
   const currentTags = extractTags(currentContent);
+  const currentLinks = extractLinks(currentContent);
+  const { frontmatter: currentFm } = parseFrontmatter(currentContent);
+  const currentProps = currentFm ? Object.keys(currentFm) : [];
 
   const scored: Array<{ file: TFile; score: number }> = [];
 
   for (const file of files) {
     if (file.path === currentFile.path) continue;
 
-    let score = 0;
+    const cache = app.metadataCache.getFileCache(file);
+    
+    // Only consider files with frontmatter (we need examples to learn from)
+    if (!cache?.frontmatter) continue;
+    
+    let score = SCORE.BASE_HAS_FRONTMATTER;
 
+    // Folder proximity (minor bonus, not primary signal)
     if (file.parent?.path === currentFolder) {
-      score += 10;
+      score += SCORE.SAME_FOLDER;
     } else if (currentFolder && file.path.startsWith(currentFolder)) {
-      score += 5;
+      score += SCORE.SUBFOLDER;
     }
 
-    const cache = app.metadataCache.getFileCache(file);
-    if (cache?.frontmatter) {
-      score += 3;
+    // Tag overlap (strong signal)
+    if (cache.frontmatter.tags) {
+      const fileTags = Array.isArray(cache.frontmatter.tags)
+        ? cache.frontmatter.tags
+        : [cache.frontmatter.tags];
+      const overlap = fileTags.filter((t: string) => currentTags.includes(String(t))).length;
+      score += overlap * SCORE.PER_TAG_OVERLAP;
+    }
 
-      if (cache.frontmatter.tags) {
-        const fileTags = Array.isArray(cache.frontmatter.tags)
-          ? cache.frontmatter.tags
-          : [cache.frontmatter.tags];
-        const overlap = fileTags.filter((t: string) => currentTags.includes(String(t))).length;
-        score += overlap * 2;
+    // Link connections (strong signal for flat vaults)
+    const fileBasename = file.basename.toLowerCase();
+    if (currentLinks.some(link => link.toLowerCase() === fileBasename)) {
+      score += SCORE.LINK_CONNECTION;
+    }
+    
+    // Check if this file links to current file
+    if (cache.links) {
+      const linksToCurrentFile = cache.links.some(
+        (link: { link: string }) => link.link.toLowerCase() === currentFile.basename.toLowerCase()
+      );
+      if (linksToCurrentFile) {
+        score += SCORE.LINK_CONNECTION;
       }
     }
 
-    const mtime = file.stat.mtime;
-    const daysSinceModified = (Date.now() - mtime) / (1000 * 60 * 60 * 24);
-    if (daysSinceModified < 7) score += 2;
-    else if (daysSinceModified < 30) score += 1;
-
-    if (score > 0) {
-      scored.push({ file, score });
+    // Frontmatter superset detection (strongest signal)
+    // If candidate has all props current file has + more, it's a great example
+    const candidateProps = Object.keys(cache.frontmatter);
+    const currentPropsInCandidate = currentProps.filter(p => candidateProps.includes(p));
+    
+    if (currentProps.length > 0 && currentPropsInCandidate.length === currentProps.length) {
+      // Candidate is a superset - has all current props
+      const extraProps = candidateProps.length - currentProps.length;
+      score += SCORE.SUPERSET_BASE + (extraProps * SCORE.PER_EXTRA_PROP);
+    } else if (currentPropsInCandidate.length > 0) {
+      // Partial overlap
+      score += currentPropsInCandidate.length * SCORE.PER_SHARED_PROP;
     }
+    
+    // Frontmatter richness (more properties = better example)
+    score += Math.min(candidateProps.length, SCORE.RICHNESS_CAP);
+
+    // Recency (minor signal)
+    const daysSinceModified = (Date.now() - file.stat.mtime) / MS_PER_DAY;
+    if (daysSinceModified < DAYS.RECENT) score += SCORE.RECENT_7_DAYS;
+    else if (daysSinceModified < DAYS.MODERATE) score += SCORE.RECENT_30_DAYS;
+
+    scored.push({ file, score });
   }
 
   scored.sort((a, b) => b.score - a.score);
@@ -88,6 +146,17 @@ function extractTags(content: string): string[] {
   }
 
   return [...new Set(tags)];
+}
+
+function extractLinks(content: string): string[] {
+  // Match [[link]] and [[link|alias]] patterns
+  const linkRegex = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+  const links: string[] = [];
+  let match;
+  while ((match = linkRegex.exec(content)) !== null) {
+    links.push(match[1].trim());
+  }
+  return links;
 }
 
 export interface ExamplesPromptData {
