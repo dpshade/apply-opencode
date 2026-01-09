@@ -1,9 +1,9 @@
 import { Notice, Plugin, MarkdownView, parseYaml, TFile } from "obsidian";
 import { ApplyOpenCodeSettings, DEFAULT_SETTINGS, ApplyOpenCodeSettingTab, parsePropertyList } from "./settings";
-import { parseFrontmatter, mergeFrontmatter, buildContent, FrontmatterData } from "./frontmatter";
+import { parseFrontmatter, mergeFrontmatter, buildContent, orderFrontmatter, FrontmatterData } from "./frontmatter";
 import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent } from "./opencode";
 import { showDiffModal } from "./diff-modal";
-import { findSimilarNotes } from "./vault-search";
+import { findSimilarNotes, collectVaultTags, getAllNoteTitles } from "./vault-search";
 import { showTitleConfirmModal } from "./title-confirm-modal";
 import { loadTemplateSchemas, TemplateSchema } from "./template-schema";
 import { TemplatePickerModal } from "./template-picker-modal";
@@ -47,6 +47,11 @@ export default class ApplyOpenCodePlugin extends Plugin {
 
           new Notice("Enhancing frontmatter...", 0);
 
+          const vaultTags = collectVaultTags(this.app);
+          const allTitles = this.settings.noteSearchMode === "semantic"
+            ? getAllNoteTitles(this.app, file)
+            : undefined;
+
           const enhanceResult = await enhanceFrontmatter(content, existing, {
             opencodePath: this.settings.opencodePath,
             model: this.settings.model,
@@ -54,15 +59,18 @@ export default class ApplyOpenCodePlugin extends Plugin {
             ignoredProperties: parsePropertyList(this.settings.ignoredProperties),
             maxListItems: this.settings.maxListItems,
             examples,
+            vaultTags,
+            allTitles,
           });
           console.log("[Apply OpenCode] Enhanced result:", enhanceResult);
           console.log("[Apply OpenCode] Valid properties:", enhanceResult.validProperties);
 
           const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
-          console.log("[Apply OpenCode] Merged result:", merged);
+          const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
+          console.log("[Apply OpenCode] Merged and ordered result:", ordered);
 
           console.log("[Apply OpenCode] Opening diff modal");
-          const result = await showDiffModal(this.app, existing, merged, this.settings.diffStyle);
+          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle);
           console.log("[Apply OpenCode] Modal result:", result);
 
           if (result === null) {
@@ -138,8 +146,9 @@ export default class ApplyOpenCodePlugin extends Plugin {
           processingNotice.hide();
 
           const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
+          const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
 
-          const result = await showDiffModal(this.app, existing, merged, this.settings.diffStyle);
+          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle);
 
           if (result === null) {
             new Notice("No changes to apply.", 5000);
@@ -359,6 +368,11 @@ export default class ApplyOpenCodePlugin extends Plugin {
         return false;
       }
 
+      const vaultTags = collectVaultTags(this.app);
+      const allTitles = this.settings.noteSearchMode === "semantic"
+        ? getAllNoteTitles(this.app, file)
+        : undefined;
+
       const enhanceResult = await enhanceFrontmatter(content, existing, {
         opencodePath: this.settings.opencodePath,
         model: this.settings.model,
@@ -366,12 +380,15 @@ export default class ApplyOpenCodePlugin extends Plugin {
         ignoredProperties: parsePropertyList(this.settings.ignoredProperties),
         maxListItems: this.settings.maxListItems,
         examples,
+        vaultTags,
+        allTitles,
       });
 
       const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
-      
+      const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
+
       // For bulk operations, apply directly without diff modal
-      const newContent = buildContent(merged, body);
+      const newContent = buildContent(ordered, body);
       await this.app.vault.modify(file, newContent);
       return true;
     } catch (err) {

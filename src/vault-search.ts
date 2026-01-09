@@ -162,15 +162,91 @@ function extractLinks(content: string): string[] {
 export interface ExamplesPromptData {
   promptText: string;
   validProperties: string[];
+  propertyOrder: string[];
+  vaultTags: string[];
 }
 
-export function formatExamplesForPrompt(examples: SimilarNote[]): ExamplesPromptData {
-  if (examples.length === 0) {
-    return { promptText: "", validProperties: [] };
+/**
+ * Collect all unique tags used across the vault
+ */
+export function collectVaultTags(app: App): string[] {
+  const tags = new Set<string>();
+
+  for (const file of app.vault.getMarkdownFiles()) {
+    const cache = app.metadataCache.getFileCache(file);
+    if (!cache) continue;
+
+    // Tags from frontmatter
+    if (cache.frontmatter?.tags) {
+      const fmTags = Array.isArray(cache.frontmatter.tags)
+        ? cache.frontmatter.tags
+        : [cache.frontmatter.tags];
+      fmTags.forEach((t: string) => tags.add(String(t)));
+    }
+
+    // Inline tags from body
+    if (cache.tags) {
+      cache.tags.forEach((t: { tag: string }) => tags.add(t.tag.replace(/^#/, "")));
+    }
   }
 
-  // Extract unique property names from all examples
-  const validProperties = [...new Set(examples.flatMap(ex => Object.keys(ex.frontmatter)))];
+  return [...tags].sort();
+}
+
+/**
+ * Get all note titles (basenames) in the vault for semantic search mode.
+ * Excludes the current file being processed.
+ */
+export function getAllNoteTitles(app: App, excludeFile?: TFile): string[] {
+  return app.vault
+    .getMarkdownFiles()
+    .filter((file) => !excludeFile || file.path !== excludeFile.path)
+    .map((file) => file.basename)
+    .sort();
+}
+
+/**
+ * Determine the canonical property order based on frequency of appearance order in examples
+ */
+function computePropertyOrder(examples: SimilarNote[]): string[] {
+  // Track the average position of each property across examples
+  const positionSums: Record<string, number> = {};
+  const positionCounts: Record<string, number> = {};
+
+  for (const example of examples) {
+    const keys = Object.keys(example.frontmatter);
+    keys.forEach((key, index) => {
+      positionSums[key] = (positionSums[key] || 0) + index;
+      positionCounts[key] = (positionCounts[key] || 0) + 1;
+    });
+  }
+
+  // Calculate average position for each property
+  const avgPositions: Array<{ key: string; avg: number }> = [];
+  for (const key of Object.keys(positionSums)) {
+    avgPositions.push({
+      key,
+      avg: positionSums[key] / positionCounts[key],
+    });
+  }
+
+  // Sort by average position (properties that appear earlier on average come first)
+  avgPositions.sort((a, b) => a.avg - b.avg);
+  return avgPositions.map(p => p.key);
+}
+
+export function formatExamplesForPrompt(
+  examples: SimilarNote[],
+  vaultTags: string[] = [],
+  allTitles?: string[]
+): ExamplesPromptData {
+  if (examples.length === 0 && !allTitles?.length) {
+    return { promptText: "", validProperties: [], propertyOrder: [], vaultTags };
+  }
+
+  // Compute canonical property order from examples
+  const propertyOrder = computePropertyOrder(examples);
+  const validProperties = [...propertyOrder]; // Same properties, just ordered
 
   const formatted = examples
     .map((ex, i) => {
@@ -181,13 +257,32 @@ export function formatExamplesForPrompt(examples: SimilarNote[]): ExamplesPrompt
     })
     .join("\n\n");
 
-  const promptText = `
+  // Include vault tags if available (limit to 50 most common to avoid huge prompts)
+  const tagsSection = vaultTags.length > 0
+    ? `\n\nEXISTING TAGS IN VAULT: ${vaultTags.slice(0, 50).join(", ")}${vaultTags.length > 50 ? ` (and ${vaultTags.length - 50} more)` : ""}
+STRONGLY prefer using existing tags from this list. Only create a new tag if it clearly follows the vault's tagging conventions and no existing tag fits.`
+    : "";
+
+  // Include all titles for semantic mode (bridge/wikilink suggestions)
+  const titlesSection = allTitles && allTitles.length > 0
+    ? `\n\nVAULT NOTE TITLES (for suggesting wikilinks/bridges):
+${allTitles.map((t) => `- ${t}`).join("\n")}
+
+When suggesting wikilinks or bridge connections, prefer linking to notes from this list.`
+    : "";
+
+  const examplesSection = examples.length > 0
+    ? `
 EXAMPLES OF FRONTMATTER FROM SIMILAR NOTES IN THIS VAULT:
 ${formatted}
 
-VALID PROPERTIES (only use these): ${validProperties.join(", ")}
+VALID PROPERTIES (only use these, in this preferred order): ${propertyOrder.join(", ")}`
+    : "";
 
-Use a similar style, structure, and field names as these examples. Do NOT invent new property names.`;
+  const promptText = `${examplesSection}${tagsSection}${titlesSection}
 
-  return { promptText, validProperties };
+Use a similar style, structure, and field names as these examples. Do NOT invent new property names.
+Output properties in the order listed above.`;
+
+  return { promptText, validProperties, propertyOrder, vaultTags };
 }
