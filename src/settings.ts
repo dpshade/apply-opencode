@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, TFile } from "obsidian";
 import { spawn } from "child_process";
 import ApplyOpenCodePlugin from "./main";
 
@@ -11,6 +11,7 @@ export interface ApplyOpenCodeSettings {
   ignoredProperties: string;
   diffStyle: DiffStyle;
   maxListItems: number;
+  confirmTitleRename: boolean;
 }
 
 const DEFAULT_OPENCODE_PATH = "/Users/dps/.opencode/bin/opencode";
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: ApplyOpenCodeSettings = {
   ignoredProperties: "created, modified, uid",
   diffStyle: "split",
   maxListItems: 3,
+  confirmTitleRename: false,
 };
 
 export function parsePropertyList(input: string): string[] {
@@ -188,5 +190,119 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl).setName("Title generation").setHeading();
+
+    new Setting(containerEl)
+      .setName("Confirm before rename")
+      .setDesc("Show a confirmation modal before renaming files with AI-generated titles.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.confirmTitleRename)
+          .onChange(async (value) => {
+            this.plugin.settings.confirmTitleRename = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // Bulk rename section
+    const untitledFiles = this.getUntitledFiles();
+    const bulkSetting = new Setting(containerEl)
+      .setName("Bulk rename untitled files")
+      .setDesc(`Found ${untitledFiles.length} file(s) with "Untitled" in the name.`);
+
+    if (untitledFiles.length > 0) {
+      bulkSetting.addButton((btn) =>
+        btn
+          .setButtonText(`Rename all ${untitledFiles.length} files`)
+          .setCta()
+          .onClick(async () => {
+            btn.setDisabled(true);
+            btn.setButtonText("Renaming...");
+            await this.bulkRenameUntitled(untitledFiles);
+            // Refresh the settings display
+            this.display();
+          })
+      );
+    }
+
+    // Bulk enhance frontmatter section
+    const noFrontmatterFiles = this.getFilesWithoutFrontmatter();
+    const bulkFrontmatterSetting = new Setting(containerEl)
+      .setName("Bulk enhance frontmatter")
+      .setDesc(`Found ${noFrontmatterFiles.length} file(s) with no frontmatter.`);
+
+    if (noFrontmatterFiles.length > 0) {
+      bulkFrontmatterSetting.addButton((btn) =>
+        btn
+          .setButtonText(`Enhance all ${noFrontmatterFiles.length} files`)
+          .setCta()
+          .onClick(async () => {
+            btn.setDisabled(true);
+            btn.setButtonText("Enhancing...");
+            await this.bulkEnhanceFrontmatter(noFrontmatterFiles);
+            this.display();
+          })
+      );
+    }
+  }
+
+  private getUntitledFiles(): TFile[] {
+    return this.app.vault
+      .getMarkdownFiles()
+      .filter((file) => file.basename.toLowerCase().includes("untitled"));
+  }
+
+  private getFilesWithoutFrontmatter(): TFile[] {
+    const files: TFile[] = [];
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (!cache?.frontmatter) {
+        files.push(file);
+      }
+    }
+    return files;
+  }
+
+  private async bulkRenameUntitled(files: TFile[]): Promise<void> {
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const file of files) {
+      try {
+        const success = await this.plugin.generateTitleForFile(file);
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`[Apply OpenCode] Failed to rename ${file.path}:`, err);
+        failCount++;
+      }
+    }
+
+    new Notice(`Bulk rename complete: ${successCount} renamed, ${failCount} failed`);
+  }
+
+  private async bulkEnhanceFrontmatter(files: TFile[]): Promise<void> {
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const file of files) {
+      try {
+        const success = await this.plugin.enhanceFrontmatterForFile(file);
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`[Apply OpenCode] Failed to enhance ${file.path}:`, err);
+        failCount++;
+      }
+    }
+
+    new Notice(`Bulk enhance complete: ${successCount} enhanced, ${failCount} failed`);
   }
 }

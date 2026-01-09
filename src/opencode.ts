@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { FrontmatterData } from "./frontmatter";
 import { SimilarNote, formatExamplesForPrompt, ExamplesPromptData } from "./vault-search";
+import { TitleExtractor, TITLE_GENERATION_PROMPT } from "./title-generator";
 
 export interface OpenCodeOptions {
   opencodePath: string;
@@ -232,4 +233,37 @@ function parseYamlResponse(response: string): FrontmatterData {
   }
 
   return result;
+}
+
+export interface TitleGenerationOptions {
+  opencodePath: string;
+  model: string;
+}
+
+/**
+ * Generate a title for note content using OpenCode CLI
+ */
+export async function generateTitle(
+  content: string,
+  options: TitleGenerationOptions
+): Promise<string | null> {
+  // Use first 2000 chars for context (matches auto-title behavior)
+  const truncatedContent = content.substring(0, 2000);
+  const prompt = TITLE_GENERATION_PROMPT + truncatedContent;
+
+  const response = await runOpenCode(options.opencodePath, options.model, prompt);
+
+  const extractedTitle = TitleExtractor.extractTitle(response);
+  if (!extractedTitle) {
+    console.debug("[Apply OpenCode] Failed to extract title from response:", response);
+    return null;
+  }
+
+  const cleanTitle = TitleExtractor.validateAndCleanTitle(extractedTitle);
+  if (!cleanTitle) {
+    console.debug("[Apply OpenCode] Title failed validation:", extractedTitle);
+    return null;
+  }
+
+  return cleanTitle;
 }
