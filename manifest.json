@@ -3,8 +3,8 @@
   "name": "Apply OpenCode",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
-  "description": "Use OpenCode to enhance your notes with AI-powered frontmatter suggestions.",
+  "description": "AI-powered frontmatter enhancement and title generation for Obsidian.",
   "author": "Dylan Shade",
   "authorUrl": "https://github.com/dps",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }
