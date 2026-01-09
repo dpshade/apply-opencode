@@ -35,12 +35,12 @@ export default class ApplyOpenCodePlugin extends Plugin {
         const content = editor.getValue();
         const { frontmatter: existing, body } = parseFrontmatter(content);
 
-        console.log("[Apply OpenCode] Starting enhancement");
-        console.log("[Apply OpenCode] Existing frontmatter:", existing);
+        console.debug("[Apply OpenCode] Starting enhancement");
+        console.debug("[Apply OpenCode] Existing frontmatter:", existing);
 
         try {
           const examples = await findSimilarNotes(this.app, file, content, 5);
-          console.log("[Apply OpenCode] Found similar notes:", examples.length);
+          console.debug("[Apply OpenCode] Found similar notes:", examples.length);
 
           if (examples.length === 0) {
             new Notice("No similar notes found. Cannot determine valid properties.", 10000);
@@ -64,16 +64,16 @@ export default class ApplyOpenCodePlugin extends Plugin {
             vaultTags,
             allTitles,
           });
-          console.log("[Apply OpenCode] Enhanced result:", enhanceResult);
-          console.log("[Apply OpenCode] Valid properties:", enhanceResult.validProperties);
+          console.debug("[Apply OpenCode] Enhanced result:", enhanceResult);
+          console.debug("[Apply OpenCode] Valid properties:", enhanceResult.validProperties);
 
           const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
           const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
-          console.log("[Apply OpenCode] Merged and ordered result:", ordered);
+          console.debug("[Apply OpenCode] Merged and ordered result:", ordered);
 
-          console.log("[Apply OpenCode] Opening diff modal");
+          console.debug("[Apply OpenCode] Opening diff modal");
           const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle);
-          console.log("[Apply OpenCode] Modal result:", result);
+          console.debug("[Apply OpenCode] Modal result:", result);
 
           if (result === null) {
             new Notice("No changes to apply.", 5000);
@@ -455,7 +455,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     try {
       const examples = await findSimilarNotes(this.app, file, content, 5);
       if (examples.length === 0) {
-        console.log(`[Apply OpenCode] No similar notes found for ${file.path}`);
+          console.info(`[Apply OpenCode] No similar notes found for ${file.path}`);
         return false;
       }
 

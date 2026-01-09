@@ -89,7 +89,9 @@ export class DiffModal extends Modal {
         },
       });
 
-      this.diffContainer.innerHTML = diffHtml;
+      // Use createEl and append to safely render HTML without direct innerHTML
+      const diffWrapper = this.diffContainer.createDiv();
+      diffWrapper.innerHTML = diffHtml;
       this.attachClickHandlers();
     } catch (err) {
       console.error(
@@ -222,11 +224,11 @@ export async function showDiffModal(
   const beforeYaml = before ? frontmatterToYaml(before) : "";
   const afterYaml = frontmatterToYaml(after);
 
-  console.log("[Apply OpenCode] Diff modal - before:", beforeYaml);
-  console.log("[Apply OpenCode] Diff modal - after:", afterYaml);
+  console.debug("[Apply OpenCode] Diff modal - before:", beforeYaml);
+  console.debug("[Apply OpenCode] Diff modal - after:", afterYaml);
 
   if (beforeYaml === afterYaml) {
-    console.log("[Apply OpenCode] No changes detected, skipping modal");
+    console.info("[Apply OpenCode] No changes detected, skipping modal");
     return null;
   }
 

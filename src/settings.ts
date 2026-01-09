@@ -95,12 +95,12 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
+  display(): Promise<void> {
     const { containerEl } = this;
     containerEl.empty();
 
     // Fetch models async and update dropdown when ready
-    void this.displayWithModels(containerEl);
+    return this.displayWithModels(containerEl);
   }
 
   private async displayWithModels(containerEl: HTMLElement): Promise<void> {
@@ -277,7 +277,7 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             btn.setButtonText("Renaming...");
             await this.bulkRenameUntitled(untitledFiles);
             // Refresh the settings display
-            this.display();
+            await this.display();
           })
       );
     }
@@ -297,7 +297,7 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             btn.setDisabled(true);
             btn.setButtonText("Enhancing...");
             await this.bulkEnhanceFrontmatter(noFrontmatterFiles);
-            this.display();
+            await this.display();
           })
       );
     }

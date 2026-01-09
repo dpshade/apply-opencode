@@ -252,7 +252,7 @@ function runOpenCode(opencodePath: string, model: string, prompt: string): Promi
   return new Promise((resolve, reject) => {
     const args = ["run", "--format", "json", "-m", model, "--", prompt];
     const resolvedPath = resolveOpenCodePath(opencodePath);
-    console.log("[Apply OpenCode] Running OpenCode:", resolvedPath, "with prompt length:", prompt.length);
+    console.debug("[Apply OpenCode] Running OpenCode:", resolvedPath, "with prompt length:", prompt.length);
     const proc = spawn(resolvedPath, args, {
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.opencode/bin` },
@@ -272,11 +272,11 @@ function runOpenCode(opencodePath: string, model: string, prompt: string): Promi
     });
 
     proc.on("close", (code) => {
-      console.log("[Apply OpenCode] OpenCode exited with code:", code);
-      console.log("[Apply OpenCode] Raw stdout length:", stdout.length);
+      console.debug("[Apply OpenCode] OpenCode exited with code:", code);
+      console.debug("[Apply OpenCode] Raw stdout length:", stdout.length);
       if (code === 0) {
         const text = extractTextFromJsonOutput(stdout);
-        console.log("[Apply OpenCode] Extracted text:", text.slice(0, 500));
+        console.debug("[Apply OpenCode] Extracted text:", text.slice(0, 500));
         resolve(text);
       } else {
         console.error("[Apply OpenCode] stderr:", stderr);
