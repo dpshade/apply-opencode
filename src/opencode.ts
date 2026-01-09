@@ -1,26 +1,25 @@
 import { spawn } from "child_process";
 import { FrontmatterData } from "./frontmatter";
-import { SimilarNote, formatExamplesForPrompt } from "./vault-search";
+import { SimilarNote, formatExamplesForPrompt, ExamplesPromptData } from "./vault-search";
 
 export interface OpenCodeOptions {
   opencodePath: string;
   model: string;
   customPrompt: string;
-  enhancedProperties: string[];
   ignoredProperties: string[];
+  maxListItems: number;
   examples: SimilarNote[];
 }
 
-function buildSystemPrompt(options: OpenCodeOptions): string {
-  const enhancedList = options.enhancedProperties.length > 0
-    ? options.enhancedProperties.join(", ")
-    : "tags, aliases, description, topics, related";
+export interface EnhanceResult {
+  frontmatter: FrontmatterData;
+  validProperties: string[];
+}
 
+function buildSystemPrompt(options: OpenCodeOptions, examplesData: ExamplesPromptData): string {
   const ignoredList = options.ignoredProperties.length > 0
-    ? `\n6. NEVER touch these properties: ${options.ignoredProperties.join(", ")}`
+    ? `\n5. NEVER touch these properties: ${options.ignoredProperties.join(", ")}`
     : "";
-
-  const examplesSection = formatExamplesForPrompt(options.examples);
 
   return `You are a frontmatter enhancement assistant. Given a markdown note, analyze its content and suggest frontmatter improvements.
 
@@ -28,12 +27,11 @@ RULES:
 1. NEVER remove or overwrite existing field values
 2. For array fields (like tags), you may ADD new items but never remove existing ones
 3. For string fields, you may EXTEND the content but never replace it entirely
-4. Output ONLY valid YAML frontmatter (no markdown fences, no explanations)
-5. Include all existing fields plus any new suggested fields${ignoredList}
-7. Match the style and field names used in the example frontmatter from this vault
-
-Focus on enhancing these properties: ${enhancedList}
-${examplesSection}
+4. Output ONLY valid YAML frontmatter (no markdown fences, no explanations)${ignoredList}
+6. ONLY use property names that appear in the examples below - do NOT invent new properties
+7. For list/array properties, include at most ${options.maxListItems} items unless truly exceptional
+8. Match the style and field names used in the example frontmatter from this vault
+${examplesData.promptText}
 
 Analyze the note content and output enhanced frontmatter YAML only.`;
 }
@@ -42,14 +40,15 @@ export async function enhanceFrontmatter(
   noteContent: string,
   existingFrontmatter: FrontmatterData | null,
   options: OpenCodeOptions
-): Promise<FrontmatterData> {
+): Promise<EnhanceResult> {
   const existingYaml = existingFrontmatter
     ? Object.entries(existingFrontmatter)
         .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
         .join("\n")
     : "(no existing frontmatter)";
 
-  const systemPrompt = buildSystemPrompt(options);
+  const examplesData = formatExamplesForPrompt(options.examples);
+  const systemPrompt = buildSystemPrompt(options, examplesData);
 
   const userPrompt = `EXISTING FRONTMATTER:
 ${existingYaml}
@@ -62,7 +61,14 @@ ${options.customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${options.customPrompt}\n\n`
   const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
   const response = await runOpenCode(options.opencodePath, options.model, fullPrompt);
-  return filterIgnoredProperties(parseYamlResponse(response), existingFrontmatter, options.ignoredProperties);
+  const parsed = parseYamlResponse(response);
+  const filtered = filterIgnoredProperties(parsed, existingFrontmatter, options.ignoredProperties);
+  const finalFrontmatter = filterToValidProperties(filtered, existingFrontmatter, examplesData.validProperties);
+  
+  return {
+    frontmatter: finalFrontmatter,
+    validProperties: examplesData.validProperties,
+  };
 }
 
 function filterIgnoredProperties(
@@ -77,6 +83,31 @@ function filterIgnoredProperties(
       result[prop] = existing[prop];
     } else {
       delete result[prop];
+    }
+  }
+
+  return result;
+}
+
+function filterToValidProperties(
+  enhanced: FrontmatterData,
+  existing: FrontmatterData | null,
+  validProperties: string[]
+): FrontmatterData {
+  // If no examples found, allow all properties (fallback)
+  if (validProperties.length === 0) {
+    return enhanced;
+  }
+
+  const result: FrontmatterData = {};
+  const allowed = new Set([
+    ...validProperties,
+    ...Object.keys(existing || {}),
+  ]);
+
+  for (const [key, value] of Object.entries(enhanced)) {
+    if (allowed.has(key)) {
+      result[key] = value;
     }
   }
 
@@ -120,7 +151,7 @@ function runOpenCode(opencodePath: string, model: string, prompt: string): Promi
   return new Promise((resolve, reject) => {
     const args = ["run", "--format", "json", "-m", model, "--", prompt];
     const resolvedPath = resolveOpenCodePath(opencodePath);
-    console.log("[Auto Frontmatter] Running OpenCode:", resolvedPath, "with prompt length:", prompt.length);
+    console.log("[Apply OpenCode] Running OpenCode:", resolvedPath, "with prompt length:", prompt.length);
     const proc = spawn(resolvedPath, args, {
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.opencode/bin` },
@@ -140,14 +171,14 @@ function runOpenCode(opencodePath: string, model: string, prompt: string): Promi
     });
 
     proc.on("close", (code) => {
-      console.log("[Auto Frontmatter] OpenCode exited with code:", code);
-      console.log("[Auto Frontmatter] Raw stdout length:", stdout.length);
+      console.log("[Apply OpenCode] OpenCode exited with code:", code);
+      console.log("[Apply OpenCode] Raw stdout length:", stdout.length);
       if (code === 0) {
         const text = extractTextFromJsonOutput(stdout);
-        console.log("[Auto Frontmatter] Extracted text:", text.slice(0, 500));
+        console.log("[Apply OpenCode] Extracted text:", text.slice(0, 500));
         resolve(text);
       } else {
-        console.error("[Auto Frontmatter] stderr:", stderr);
+        console.error("[Apply OpenCode] stderr:", stderr);
         reject(new Error(`OpenCode exited with code ${code}: ${stderr}`));
       }
     });

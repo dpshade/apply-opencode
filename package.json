@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-auto-frontmatter",
+  "name": "apply-opencode",
   "version": "1.0.0",
-  "description": "Automatically manage and update frontmatter in your Obsidian notes",
+  "description": "Use OpenCode to enhance your notes with AI-powered frontmatter suggestions",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -20,10 +20,10 @@
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.0",
     "eslint": "^9.0.0",
     "eslint-plugin-obsidianmd": "^0.1.9",
+    "globals": "^17.0.0",
     "obsidian": "latest",
     "typescript": "^5.3.0"
   },

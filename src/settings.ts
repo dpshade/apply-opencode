@@ -1,27 +1,27 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { spawn } from "child_process";
-import AutoFrontmatterPlugin from "./main";
+import ApplyOpenCodePlugin from "./main";
 
 export type DiffStyle = "split" | "unified";
 
-export interface AutoFrontmatterSettings {
+export interface ApplyOpenCodeSettings {
   model: string;
   opencodePath: string;
   customPrompt: string;
-  enhancedProperties: string;
   ignoredProperties: string;
   diffStyle: DiffStyle;
+  maxListItems: number;
 }
 
 const DEFAULT_OPENCODE_PATH = "/Users/dps/.opencode/bin/opencode";
 
-export const DEFAULT_SETTINGS: AutoFrontmatterSettings = {
+export const DEFAULT_SETTINGS: ApplyOpenCodeSettings = {
   model: "opencode/claude-sonnet-4-5",
   opencodePath: DEFAULT_OPENCODE_PATH,
   customPrompt: "",
-  enhancedProperties: "tags, aliases, description, topics, related",
   ignoredProperties: "created, modified, uid",
   diffStyle: "split",
+  maxListItems: 3,
 };
 
 export function parsePropertyList(input: string): string[] {
@@ -75,23 +75,28 @@ function tryFetchModels(opencodePath: string): Promise<string[]> {
   });
 }
 
-export class AutoFrontmatterSettingTab extends PluginSettingTab {
-  plugin: AutoFrontmatterPlugin;
+export class ApplyOpenCodeSettingTab extends PluginSettingTab {
+  plugin: ApplyOpenCodePlugin;
 
-  constructor(app: App, plugin: AutoFrontmatterPlugin) {
+  constructor(app: App, plugin: ApplyOpenCodePlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
 
-  async display(): Promise<void> {
+  display(): void {
     const { containerEl } = this;
     containerEl.empty();
 
+    // Fetch models async and update dropdown when ready
+    void this.displayWithModels(containerEl);
+  }
+
+  private async displayWithModels(containerEl: HTMLElement): Promise<void> {
     const models = await fetchAvailableModels(this.plugin.settings.opencodePath);
 
     const modelSetting = new Setting(containerEl)
       .setName("Model")
-      .setDesc("OpenCode model to use for frontmatter enhancement.");
+      .setDesc("Model to use for frontmatter enhancement.");
 
     if (models.length > 0) {
       modelSetting.addDropdown((dropdown) => {
@@ -106,10 +111,10 @@ export class AutoFrontmatterSettingTab extends PluginSettingTab {
       });
     } else {
       modelSetting
-        .setDesc("OpenCode model (could not fetch model list - enter manually).")
+        .setDesc("Model (could not fetch model list - enter manually).")
         .addText((text) =>
           text
-            .setPlaceholder("opencode/claude-sonnet-4-5")
+            .setPlaceholder("Model ID")
             .setValue(this.plugin.settings.model)
             .onChange(async (value) => {
               this.plugin.settings.model = value;
@@ -119,8 +124,8 @@ export class AutoFrontmatterSettingTab extends PluginSettingTab {
     }
 
     new Setting(containerEl)
-      .setName("OpenCode path")
-      .setDesc("Path to OpenCode executable.")
+      .setName("Executable path")
+      .setDesc("Path to the opencode executable.")
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_OPENCODE_PATH)
@@ -145,14 +150,15 @@ export class AutoFrontmatterSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Enhanced properties")
-      .setDesc("Comma-separated list of frontmatter properties the AI should focus on enhancing.")
-      .addText((text) =>
-        text
-          .setPlaceholder("tags, aliases, description")
-          .setValue(this.plugin.settings.enhancedProperties)
+      .setName("Max list items")
+      .setDesc("Maximum items for array properties (tags, etc). Only exceed if truly exceptional.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(1, 10, 1)
+          .setValue(this.plugin.settings.maxListItems)
+          .setDynamicTooltip()
           .onChange(async (value) => {
-            this.plugin.settings.enhancedProperties = value;
+            this.plugin.settings.maxListItems = value;
             await this.plugin.saveSettings();
           })
       );
@@ -162,7 +168,7 @@ export class AutoFrontmatterSettingTab extends PluginSettingTab {
       .setDesc("Comma-separated list of frontmatter properties the AI should never modify.")
       .addText((text) =>
         text
-          .setPlaceholder("created, modified, uid")
+          .setPlaceholder("Property names")
           .setValue(this.plugin.settings.ignoredProperties)
           .onChange(async (value) => {
             this.plugin.settings.ignoredProperties = value;

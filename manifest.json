@@ -1,9 +1,9 @@
 {
-  "id": "auto-frontmatter",
-  "name": "Auto Frontmatter",
+  "id": "apply-opencode",
+  "name": "Apply OpenCode",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
-  "description": "Automatically manage and update frontmatter in your notes.",
+  "description": "Use OpenCode to enhance your notes with AI-powered frontmatter suggestions.",
   "author": "Dylan Shade",
   "authorUrl": "https://github.com/dps",
   "isDesktopOnly": false
