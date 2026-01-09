@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { FrontmatterData } from "./frontmatter";
+import { FrontmatterData, parseFrontmatter } from "./frontmatter";
 import { SimilarNote, formatExamplesForPrompt, ExamplesPromptData } from "./vault-search";
 import { TitleExtractor, TITLE_GENERATION_PROMPT } from "./title-generator";
 import { TemplateSchema, formatSchemaForPrompt } from "./template-schema";
@@ -11,12 +11,15 @@ export interface OpenCodeOptions {
   ignoredProperties: string[];
   maxListItems: number;
   examples: SimilarNote[];
+  vaultTags: string[];
   templateSchema?: TemplateSchema | null;
+  allTitles?: string[];
 }
 
 export interface EnhanceResult {
   frontmatter: FrontmatterData;
   validProperties: string[];
+  propertyOrder: string[];
 }
 
 export interface TemplateEnhanceOptions {
@@ -68,14 +71,19 @@ export async function enhanceFromTemplate(
         .join("\n")
     : "(no existing frontmatter)";
 
+  // Extract just the body to avoid sending frontmatter twice
+  const { body } = parseFrontmatter(noteContent);
+
   const systemPrompt = buildTemplatePrompt(options.templateSchema);
-  const validProperties = options.templateSchema.properties.map(p => p.name);
+  // Property order comes from template definition order
+  const propertyOrder = options.templateSchema.properties.map(p => p.name);
+  const validProperties = [...propertyOrder];
 
   const userPrompt = `EXISTING FRONTMATTER:
 ${existingYaml}
 
 NOTE CONTENT:
-${noteContent}
+${body}
 
 ${options.customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${options.customPrompt}\n\n` : ""}Output frontmatter YAML for the template properties:`;
 
@@ -95,6 +103,7 @@ ${options.customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${options.customPrompt}\n\n`
   return {
     frontmatter: filtered,
     validProperties,
+    propertyOrder,
   };
 }
 
@@ -134,14 +143,17 @@ export async function enhanceFrontmatter(
         .join("\n")
     : "(no existing frontmatter)";
 
-  const examplesData = formatExamplesForPrompt(options.examples);
+  // Extract just the body to avoid sending frontmatter twice
+  const { body } = parseFrontmatter(noteContent);
+
+  const examplesData = formatExamplesForPrompt(options.examples, options.vaultTags, options.allTitles);
   const systemPrompt = buildSystemPrompt(options, examplesData);
 
   const userPrompt = `EXISTING FRONTMATTER:
 ${existingYaml}
 
 NOTE CONTENT:
-${noteContent}
+${body}
 
 ${options.customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${options.customPrompt}\n\n` : ""}Output enhanced frontmatter YAML only:`;
 
@@ -155,6 +167,7 @@ ${options.customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${options.customPrompt}\n\n`
   return {
     frontmatter: finalFrontmatter,
     validProperties: examplesData.validProperties,
+    propertyOrder: examplesData.propertyOrder,
   };
 }
 

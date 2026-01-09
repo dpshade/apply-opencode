@@ -4,6 +4,7 @@ import ApplyOpenCodePlugin from "./main";
 import { ProgressModal } from "./progress-modal";
 
 export type DiffStyle = "split" | "unified";
+export type NoteSearchMode = "algo" | "semantic";
 
 export interface ApplyOpenCodeSettings {
   model: string;
@@ -13,6 +14,7 @@ export interface ApplyOpenCodeSettings {
   diffStyle: DiffStyle;
   maxListItems: number;
   confirmTitleRename: boolean;
+  noteSearchMode: NoteSearchMode;
 }
 
 const DEFAULT_OPENCODE_PATH = "/Users/dps/.opencode/bin/opencode";
@@ -25,6 +27,7 @@ export const DEFAULT_SETTINGS: ApplyOpenCodeSettings = {
   diffStyle: "split",
   maxListItems: 3,
   confirmTitleRename: false,
+  noteSearchMode: "algo",
 };
 
 export function parsePropertyList(input: string): string[] {
@@ -165,6 +168,24 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    const noteCount = this.app.vault.getMarkdownFiles().length;
+    const noteSearchDesc = noteCount > 1000
+      ? `Algo: top 5 scored notes. Semantic: all ${noteCount} titles sent to LLM. Warning: ${noteCount} notes will use significant tokens.`
+      : `Algo: top 5 scored notes. Semantic: all ${noteCount} titles sent to LLM for bridge suggestions.`;
+
+    new Setting(containerEl)
+      .setName("Note search mode")
+      .setDesc(noteSearchDesc)
+      .addDropdown((dropdown) => {
+        dropdown.addOption("algo", "Algorithm (top 5 scored)");
+        dropdown.addOption("semantic", `Semantic (${noteCount} titles)`);
+        dropdown.setValue(this.plugin.settings.noteSearchMode);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.noteSearchMode = value as NoteSearchMode;
+          await this.plugin.saveSettings();
+        });
+      });
 
     new Setting(containerEl)
       .setName("Ignored properties")
