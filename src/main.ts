@@ -1,13 +1,15 @@
 import { Notice, Plugin, MarkdownView, parseYaml, TFile } from "obsidian";
 import { ApplyOpenCodeSettings, DEFAULT_SETTINGS, ApplyOpenCodeSettingTab, parsePropertyList } from "./settings";
 import { parseFrontmatter, mergeFrontmatter, buildContent, orderFrontmatter, FrontmatterData } from "./frontmatter";
-import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent } from "./opencode";
+import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent, identifyWikiLinks } from "./opencode";
 import { showDiffModal } from "./diff-modal";
+import { showContentDiffModal } from "./content-diff-modal";
 import { findSimilarNotes, collectVaultTags, getAllNoteTitles } from "./vault-search";
 import { showTitleConfirmModal } from "./title-confirm-modal";
 import { loadTemplateSchemas, TemplateSchema } from "./template-schema";
 import { TemplatePickerModal } from "./template-picker-modal";
 import { showContentInputModal } from "./content-input-modal";
+import { generateWikiLinks, validateWikiLinkChanges } from "./wiki-link-generator";
 
 export default class ApplyOpenCodePlugin extends Plugin {
   settings: ApplyOpenCodeSettings;
@@ -271,6 +273,95 @@ export default class ApplyOpenCodePlugin extends Plugin {
           const message = err instanceof Error ? err.message : String(err);
           new Notice(`Failed to generate content: ${message}`, 10000);
           console.error("[Apply OpenCode] Content generation error:", err);
+        }
+      },
+    });
+
+    // Wiki link identification command
+    this.addCommand({
+      id: "identify-wiki-links",
+      name: "Identify and add wiki links",
+      editorCallback: async (editor, view) => {
+        if (!(view instanceof MarkdownView)) {
+          new Notice("No active Markdown file", 8000);
+          return;
+        }
+
+        const file = view.file;
+        if (!file) {
+          new Notice("No file open.", 8000);
+          return;
+        }
+
+        // Get content - use selection if present, otherwise full content
+        const selection = editor.getSelection();
+        const hasSelection = selection.length > 0;
+        const contentToProcess = hasSelection ? selection : editor.getValue();
+
+        const loadingNotice = new Notice("Identifying wiki links...", 0);
+
+        try {
+          const existingTitles = getAllNoteTitles(this.app, file);
+
+          // Create the entity identifier function that calls OpenCode
+          const identifyEntities = async (content: string) => {
+            const spans = await identifyWikiLinks(content, {
+              opencodePath: this.settings.opencodePath,
+              model: this.settings.model,
+              existingTitles,
+            });
+            return spans;
+          };
+
+          const modified = await generateWikiLinks({
+            content: contentToProcess,
+            existingTitles,
+            strategy: this.settings.wikiLinkStrategy,
+            mode: this.settings.wikiLinkMode,
+            identifyEntities,
+          });
+
+          loadingNotice.hide();
+
+          // Validate that only brackets were added
+          if (!validateWikiLinkChanges(contentToProcess, modified)) {
+            new Notice("Wiki link generation failed validation - content was modified beyond adding brackets", 10000);
+            console.error("[Apply OpenCode] Wiki link validation failed");
+            return;
+          }
+
+          // Show diff modal
+          const result = await showContentDiffModal(
+            this.app,
+            contentToProcess,
+            modified,
+            this.settings.diffStyle,
+            "Review wiki link changes"
+          );
+
+          if (result === null) {
+            new Notice("No wiki links to add.", 5000);
+          } else if (result.applied) {
+            // Final validation on the potentially user-modified content
+            if (!validateWikiLinkChanges(contentToProcess, result.modifiedContent)) {
+              new Notice("Changes rejected - content was modified beyond adding brackets", 10000);
+              return;
+            }
+
+            if (hasSelection) {
+              editor.replaceSelection(result.modifiedContent);
+            } else {
+              editor.setValue(result.modifiedContent);
+            }
+            new Notice("Wiki links added.", 6000);
+          } else {
+            new Notice("Changes discarded.", 5000);
+          }
+        } catch (err) {
+          loadingNotice.hide();
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to identify wiki links: ${message}`, 10000);
+          console.error("[Apply OpenCode] Wiki link error:", err);
         }
       },
     });

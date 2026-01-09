@@ -3,6 +3,7 @@ import { FrontmatterData, parseFrontmatter } from "./frontmatter";
 import { SimilarNote, formatExamplesForPrompt, ExamplesPromptData } from "./vault-search";
 import { TitleExtractor, TITLE_GENERATION_PROMPT } from "./title-generator";
 import { TemplateSchema, formatSchemaForPrompt } from "./template-schema";
+import { WikiLinkSpan } from "./wiki-link-generator";
 
 export interface OpenCodeOptions {
   opencodePath: string;
@@ -479,4 +480,135 @@ ${isReplacement ? "Generate replacement content:" : "Generate content at cursor 
   }
 
   return content;
+}
+
+export interface WikiLinkOptions {
+  opencodePath: string;
+  model: string;
+  existingTitles: string[];
+}
+
+const WIKI_LINK_SYSTEM_PROMPT = `You are a wiki link identification assistant. Analyze the markdown content and identify entities that should become wiki links.
+
+ENTITIES TO IDENTIFY:
+- People (names, nicknames, historical figures)
+- Places (cities, neighborhoods, venues, restaurants, theaters)
+- Media (movies, books, albums, songs, podcasts, TV shows)
+- Concepts (important ideas, theories, philosophies)
+- Organizations (companies, institutions, groups)
+- Events (conferences, historical events)
+- Products and tools
+
+RULES:
+1. Output a JSON array of spans to link
+2. Each span must have: start (character position), end (character position), text (exact text to wrap)
+3. ONLY identify the FIRST mention of each entity
+4. DO NOT identify text inside code blocks, frontmatter, or existing wiki links [[...]]
+5. The "text" field MUST match the EXACT characters at that position - do not modify spelling or case
+6. If an entity matches an existing note title (provided below), include it. Otherwise still include it as an unresolved link.
+
+OUTPUT FORMAT (JSON array only, no markdown fences):
+[{"start": 45, "end": 57, "text": "Perfect Days"}, {"start": 123, "end": 129, "text": "Aisha"}]
+
+If no entities found, output: []`;
+
+/**
+ * Identify entities in content that should become wiki links
+ */
+export async function identifyWikiLinks(
+  content: string,
+  options: WikiLinkOptions
+): Promise<WikiLinkSpan[]> {
+  const titlesContext = options.existingTitles.length > 0
+    ? `\nEXISTING NOTE TITLES IN VAULT:\n${options.existingTitles.slice(0, 500).join("\n")}\n`
+    : "";
+
+  const userPrompt = `${titlesContext}
+CONTENT TO ANALYZE:
+${content}
+
+Output JSON array of wiki link spans:`;
+
+  const fullPrompt = `${WIKI_LINK_SYSTEM_PROMPT}\n\n${userPrompt}`;
+
+  const response = await runOpenCode(options.opencodePath, options.model, fullPrompt);
+
+  if (!response || response.trim().length === 0) {
+    console.debug("[Apply OpenCode] Empty response from wiki link identification");
+    return [];
+  }
+
+  try {
+    // Clean up response - remove markdown fences if present
+    let jsonStr = response.trim();
+    if (jsonStr.startsWith("```json")) {
+      jsonStr = jsonStr.slice(7);
+    } else if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.slice(3);
+    }
+    if (jsonStr.endsWith("```")) {
+      jsonStr = jsonStr.slice(0, -3);
+    }
+    jsonStr = jsonStr.trim();
+
+    // Extract just the JSON array - find matching brackets
+    const startBracket = jsonStr.indexOf("[");
+    if (startBracket === -1) {
+      console.warn("[Apply OpenCode] No JSON array found in wiki link response");
+      return [];
+    }
+
+    // Find the matching closing bracket
+    let depth = 0;
+    let endBracket = -1;
+    for (let i = startBracket; i < jsonStr.length; i++) {
+      if (jsonStr[i] === "[") depth++;
+      if (jsonStr[i] === "]") depth--;
+      if (depth === 0) {
+        endBracket = i;
+        break;
+      }
+    }
+
+    if (endBracket === -1) {
+      console.warn("[Apply OpenCode] No matching closing bracket in wiki link response");
+      return [];
+    }
+
+    jsonStr = jsonStr.slice(startBracket, endBracket + 1);
+
+    const spans = JSON.parse(jsonStr) as Array<{ start: number; end: number; text: string; alias?: string }>;
+
+    // Validate and convert to WikiLinkSpan[]
+    const validSpans: WikiLinkSpan[] = [];
+    for (const span of spans) {
+      if (
+        typeof span.start === "number" &&
+        typeof span.end === "number" &&
+        typeof span.text === "string" &&
+        span.start >= 0 &&
+        span.end > span.start &&
+        span.end <= content.length
+      ) {
+        // Verify the text matches exactly
+        const actualText = content.slice(span.start, span.end);
+        if (actualText === span.text) {
+          validSpans.push({
+            start: span.start,
+            end: span.end,
+            text: span.text,
+            alias: span.alias,
+          });
+        } else {
+          console.warn(`[Apply OpenCode] Wiki link span mismatch: expected "${span.text}", got "${actualText}"`);
+        }
+      }
+    }
+
+    return validSpans;
+  } catch (err) {
+    console.error("[Apply OpenCode] Failed to parse wiki link response:", err);
+    console.debug("[Apply OpenCode] Raw response:", response);
+    return [];
+  }
 }

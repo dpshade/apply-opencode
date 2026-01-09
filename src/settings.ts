@@ -5,6 +5,8 @@ import { ProgressModal } from "./progress-modal";
 
 export type DiffStyle = "split" | "unified";
 export type NoteSearchMode = "algo" | "semantic";
+export type WikiLinkStrategy = "existing-only" | "all-entities";
+export type WikiLinkMode = "first" | "all";
 
 export interface ApplyOpenCodeSettings {
   model: string;
@@ -15,6 +17,8 @@ export interface ApplyOpenCodeSettings {
   maxListItems: number;
   confirmTitleRename: boolean;
   noteSearchMode: NoteSearchMode;
+  wikiLinkStrategy: WikiLinkStrategy;
+  wikiLinkMode: WikiLinkMode;
 }
 
 const DEFAULT_OPENCODE_PATH = "/Users/dps/.opencode/bin/opencode";
@@ -28,6 +32,8 @@ export const DEFAULT_SETTINGS: ApplyOpenCodeSettings = {
   maxListItems: 3,
   confirmTitleRename: false,
   noteSearchMode: "algo",
+  wikiLinkStrategy: "existing-only",
+  wikiLinkMode: "first",
 };
 
 export function parsePropertyList(input: string): string[] {
@@ -212,6 +218,34 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl).setName("Wiki links").setHeading();
+
+    new Setting(containerEl)
+      .setName("Wiki link strategy")
+      .setDesc("Existing notes only is instant (string matching). All entities uses AI (slower).")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("existing-only", "Existing notes only (fast)");
+        dropdown.addOption("all-entities", "All entities via AI (slow)");
+        dropdown.setValue(this.plugin.settings.wikiLinkStrategy);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.wikiLinkStrategy = value as WikiLinkStrategy;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("Wiki link mode")
+      .setDesc("Link first mention only, or all mentions of each entity.")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("first", "First mention only");
+        dropdown.addOption("all", "All mentions");
+        dropdown.setValue(this.plugin.settings.wikiLinkMode);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.wikiLinkMode = value as WikiLinkMode;
+          await this.plugin.saveSettings();
+        });
+      });
 
     new Setting(containerEl).setName("Title generation").setHeading();
 
