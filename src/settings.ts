@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, TFile } from "obsidian";
 import { spawn } from "child_process";
 import ApplyOpenCodePlugin from "./main";
+import { ProgressModal } from "./progress-modal";
 
 export type DiffStyle = "split" | "unified";
 
@@ -265,44 +266,56 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
   }
 
   private async bulkRenameUntitled(files: TFile[]): Promise<void> {
-    let successCount = 0;
-    let failCount = 0;
+    let cancelled = false;
+    const progress = new ProgressModal(this.app, files.length, () => {
+      cancelled = true;
+    });
+    progress.open();
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      if (cancelled) break;
+
+      const file = files[i];
+      progress.update(i, file.path, null);
+
       try {
         const success = await this.plugin.generateTitleForFile(file);
-        if (success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
+        progress.update(i + 1, file.path, success);
       } catch (err) {
         console.error(`[Apply OpenCode] Failed to rename ${file.path}:`, err);
-        failCount++;
+        progress.update(i + 1, file.path, false);
       }
     }
 
-    new Notice(`Bulk rename complete: ${successCount} renamed, ${failCount} failed`);
+    progress.complete();
+    const { successes, failures } = progress.getResults();
+    new Notice(`Bulk rename: ${successes} renamed, ${failures} failed${cancelled ? " (cancelled)" : ""}`);
   }
 
   private async bulkEnhanceFrontmatter(files: TFile[]): Promise<void> {
-    let successCount = 0;
-    let failCount = 0;
+    let cancelled = false;
+    const progress = new ProgressModal(this.app, files.length, () => {
+      cancelled = true;
+    });
+    progress.open();
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      if (cancelled) break;
+
+      const file = files[i];
+      progress.update(i, file.path, null);
+
       try {
         const success = await this.plugin.enhanceFrontmatterForFile(file);
-        if (success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
+        progress.update(i + 1, file.path, success);
       } catch (err) {
         console.error(`[Apply OpenCode] Failed to enhance ${file.path}:`, err);
-        failCount++;
+        progress.update(i + 1, file.path, false);
       }
     }
 
-    new Notice(`Bulk enhance complete: ${successCount} enhanced, ${failCount} failed`);
+    progress.complete();
+    const { successes, failures } = progress.getResults();
+    new Notice(`Bulk enhance: ${successes} done, ${failures} failed${cancelled ? " (cancelled)" : ""}`);
   }
 }

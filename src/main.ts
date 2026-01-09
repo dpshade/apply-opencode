@@ -1,10 +1,13 @@
 import { Notice, Plugin, MarkdownView, parseYaml, TFile } from "obsidian";
 import { ApplyOpenCodeSettings, DEFAULT_SETTINGS, ApplyOpenCodeSettingTab, parsePropertyList } from "./settings";
 import { parseFrontmatter, mergeFrontmatter, buildContent, FrontmatterData } from "./frontmatter";
-import { enhanceFrontmatter, generateTitle } from "./opencode";
+import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent } from "./opencode";
 import { showDiffModal } from "./diff-modal";
 import { findSimilarNotes } from "./vault-search";
 import { showTitleConfirmModal } from "./title-confirm-modal";
+import { loadTemplateSchemas, TemplateSchema } from "./template-schema";
+import { TemplatePickerModal } from "./template-picker-modal";
+import { showContentInputModal } from "./content-input-modal";
 
 export default class ApplyOpenCodePlugin extends Plugin {
   settings: ApplyOpenCodeSettings;
@@ -17,13 +20,13 @@ export default class ApplyOpenCodePlugin extends Plugin {
       name: "Enhance note frontmatter",
       editorCallback: async (editor, view) => {
         if (!(view instanceof MarkdownView)) {
-          new Notice("No active Markdown file");
+          new Notice("No active Markdown file", 8000);
           return;
         }
 
         const file = view.file;
         if (!file) {
-          new Notice("No file open.");
+          new Notice("No file open.", 8000);
           return;
         }
 
@@ -38,11 +41,11 @@ export default class ApplyOpenCodePlugin extends Plugin {
           console.log("[Apply OpenCode] Found similar notes:", examples.length);
 
           if (examples.length === 0) {
-            new Notice("No similar notes found. Cannot determine valid properties.");
+            new Notice("No similar notes found. Cannot determine valid properties.", 10000);
             return;
           }
 
-          new Notice("Enhancing frontmatter...");
+          new Notice("Enhancing frontmatter...", 0);
 
           const enhanceResult = await enhanceFrontmatter(content, existing, {
             opencodePath: this.settings.opencodePath,
@@ -63,23 +66,98 @@ export default class ApplyOpenCodePlugin extends Plugin {
           console.log("[Apply OpenCode] Modal result:", result);
 
           if (result === null) {
-            new Notice("No changes to apply.");
+            new Notice("No changes to apply.", 5000);
           } else if (result.applied) {
             // Parse the modified YAML back to an object
             const finalFrontmatter = parseYaml(result.modifiedYaml) as FrontmatterData | undefined;
             if (!finalFrontmatter) {
-              new Notice("Failed to parse modified frontmatter.");
+              new Notice("Failed to parse modified frontmatter.", 10000);
               return;
             }
             const newContent = buildContent(finalFrontmatter, body);
             editor.setValue(newContent);
-            new Notice("Frontmatter updated.");
+            new Notice("Frontmatter updated.", 6000);
           } else {
-            new Notice("Changes discarded.");
+            new Notice("Changes discarded.", 5000);
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           new Notice(`Failed to enhance frontmatter: ${message}`);
+          console.error("[Apply OpenCode] Error:", err);
+        }
+      },
+    });
+
+    // Template-based enhancement command
+    this.addCommand({
+      id: "use-template-frontmatter",
+      name: "Use template for frontmatter",
+      editorCallback: async (editor, view) => {
+        if (!(view instanceof MarkdownView)) {
+          new Notice("No active Markdown file", 8000);
+          return;
+        }
+
+        const file = view.file;
+        if (!file) {
+          new Notice("No file open.", 8000);
+          return;
+        }
+
+        const content = editor.getValue();
+        const { frontmatter: existing, body } = parseFrontmatter(content);
+
+        try {
+          const templates = await loadTemplateSchemas(this.app);
+          if (templates.length === 0) {
+            new Notice("No template files found. Create a template in a templates folder.", 10000);
+            return;
+          }
+
+          // Show template picker
+          const template = await new Promise<TemplateSchema | null>((resolve) => {
+            const modal = new TemplatePickerModal(this.app, templates, resolve);
+            modal.open();
+          });
+
+          if (!template) {
+            new Notice("Template selection cancelled.", 5000);
+            return;
+          }
+
+          const processingNotice = new Notice(`Using template: ${template.templatePath}`, 0);
+
+          // Enhance using template properties only
+          const enhanceResult = await enhanceFromTemplate(content, existing, {
+            opencodePath: this.settings.opencodePath,
+            model: this.settings.model,
+            customPrompt: this.settings.customPrompt,
+            templateSchema: template,
+          });
+
+          processingNotice.hide();
+
+          const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
+
+          const result = await showDiffModal(this.app, existing, merged, this.settings.diffStyle);
+
+          if (result === null) {
+            new Notice("No changes to apply.", 5000);
+          } else if (result.applied) {
+            const finalFrontmatter = parseYaml(result.modifiedYaml) as FrontmatterData | undefined;
+            if (!finalFrontmatter) {
+              new Notice("Failed to parse modified frontmatter.", 10000);
+              return;
+            }
+            const newContent = buildContent(finalFrontmatter, body);
+            editor.setValue(newContent);
+            new Notice("Frontmatter updated from template.", 6000);
+          } else {
+            new Notice("Changes discarded.", 5000);
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to use template: ${message}`, 10000);
           console.error("[Apply OpenCode] Error:", err);
         }
       },
@@ -92,10 +170,99 @@ export default class ApplyOpenCodePlugin extends Plugin {
       callback: async () => {
         const activeFile = this.app.workspace.getActiveFile();
         if (!activeFile) {
-          new Notice("No active file to rename");
+          new Notice("No active file to rename", 8000);
           return;
         }
         await this.generateTitleForFile(activeFile);
+      },
+    });
+
+    // Content generation command
+    this.addCommand({
+      id: "generate-content",
+      name: "Generate content at cursor",
+      editorCallback: async (editor, view) => {
+        if (!(view instanceof MarkdownView)) {
+          new Notice("No active Markdown file", 8000);
+          return;
+        }
+
+        const file = view.file;
+        if (!file) {
+          new Notice("No file open.", 8000);
+          return;
+        }
+
+        // Check if there's a selection
+        const selection = editor.getSelection();
+        const hasSelection = selection.length > 0;
+
+        // Get optional instruction from user
+        const inputResult = await showContentInputModal(this.app, hasSelection);
+        if (inputResult.cancelled) {
+          return;
+        }
+
+        const content = editor.getValue();
+        const { frontmatter } = parseFrontmatter(content);
+
+        let textBefore: string;
+        let textAfter: string;
+        let selectedText: string | undefined;
+
+        if (hasSelection) {
+          // Selection mode: replace selected text
+          const from = editor.getCursor("from");
+          const to = editor.getCursor("to");
+          const fromOffset = editor.posToOffset(from);
+          const toOffset = editor.posToOffset(to);
+
+          textBefore = content.slice(0, fromOffset);
+          textAfter = content.slice(toOffset);
+          selectedText = selection;
+        } else {
+          // Cursor mode: insert at cursor
+          const cursor = editor.getCursor();
+          const offset = editor.posToOffset(cursor);
+          textBefore = content.slice(0, offset);
+          textAfter = content.slice(offset);
+        }
+
+        const loadingNotice = new Notice(hasSelection ? "Generating replacement..." : "Generating content...", 0);
+
+        try {
+          const generated = await generateContent({
+            opencodePath: this.settings.opencodePath,
+            model: this.settings.model,
+            title: file.basename,
+            frontmatter,
+            textBefore,
+            textAfter,
+            instruction: inputResult.instruction || undefined,
+            selectedText,
+          });
+
+          loadingNotice.hide();
+
+          if (!generated) {
+            new Notice("Failed to generate content", 10000);
+            return;
+          }
+
+          if (hasSelection) {
+            // Replace selection
+            editor.replaceSelection(generated);
+          } else {
+            // Insert at cursor position
+            editor.replaceRange(generated, editor.getCursor());
+          }
+          new Notice(`Generated ${generated.length} characters`, 5000);
+        } catch (err) {
+          loadingNotice.hide();
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to generate content: ${message}`, 10000);
+          console.error("[Apply OpenCode] Content generation error:", err);
+        }
       },
     });
 
@@ -103,7 +270,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     this.addRibbonIcon("brain-circuit", "Enhance title with AI", async () => {
       const activeFile = this.app.workspace.getActiveFile();
       if (!activeFile) {
-        new Notice("No active file to rename");
+        new Notice("No active file to rename", 8000);
         return;
       }
       await this.generateTitleForFile(activeFile);
@@ -117,17 +284,17 @@ export default class ApplyOpenCodePlugin extends Plugin {
     try {
       content = await this.app.vault.read(file);
     } catch {
-      new Notice("Cannot read file content - may be a binary file");
+      new Notice("Cannot read file content - may be a binary file", 10000);
       return false;
     }
 
     if (content.trim().length < 10) {
-      new Notice("File content is too short to generate a meaningful title");
+      new Notice("File content is too short to generate a meaningful title", 8000);
       return false;
     }
 
     if (content.length > 100000) {
-      new Notice("File is too large for title generation");
+      new Notice("File is too large for title generation", 8000);
       return false;
     }
 
@@ -144,7 +311,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     }
 
     if (!title) {
-      new Notice("Failed to generate title");
+      new Notice("Failed to generate title", 10000);
       return false;
     }
 
@@ -152,7 +319,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     if (this.settings.confirmTitleRename) {
       const result = await showTitleConfirmModal(this.app, title, file.basename);
       if (!result.confirmed) {
-        new Notice("Rename cancelled");
+        new Notice("Rename cancelled", 5000);
         return false;
       }
       title = result.title;
@@ -170,7 +337,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     }
 
     await this.app.fileManager.renameFile(file, newPath);
-    new Notice(`Renamed to: ${title}.${extension}`);
+    new Notice(`Renamed to: ${title}.${extension}`, 8000);
     return true;
   }
 

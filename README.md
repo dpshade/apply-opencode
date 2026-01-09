@@ -16,6 +16,12 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 - Optional confirmation modal before rename
 - Bulk rename all "Untitled" files at once
 
+### Content Generation
+- Generate 500-1000 characters at cursor position
+- Select text to replace it with AI-generated content
+- Uses note title, frontmatter, and surrounding context for relevance
+- Optional instruction to guide generation (e.g., "summarize", "expand", "add examples")
+
 ## Installation
 
 ### Using BRAT (Recommended)
@@ -48,6 +54,12 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 1. Open a note
 2. Click the brain icon in the ribbon, or run command: **Apply OpenCode: Generate AI title for current file**
 3. File is renamed based on content
+
+### Generate Content
+1. Place cursor where you want content, or select text to replace
+2. Run command: **Apply OpenCode: Generate content at cursor**
+3. Optionally type an instruction (e.g., "add a conclusion"), or leave empty for natural continuation
+4. Press **Enter** to generate
 
 ### Bulk Operations (Settings)
 - **Bulk rename untitled files** - Rename all files with "Untitled" in the name
