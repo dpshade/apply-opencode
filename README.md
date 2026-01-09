@@ -18,6 +18,13 @@ AI-powered frontmatter enhancement and title generation for Obsidian, using [Ope
 
 ## Installation
 
+### Using BRAT (Recommended)
+
+1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
+2. Open BRAT settings and click "Add Beta plugin"
+3. Enter: `dpshade/apply-opencode`
+4. Enable the plugin in Settings > Community plugins
+
 ### Manual Installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
