@@ -10,12 +10,16 @@ export interface DiffModalResult {
   modifiedYaml: string;
 }
 
+export type FrontmatterRevisionCallback = (currentYaml: string, instruction: string) => Promise<string | null>;
+
 export class DiffModal extends Modal {
   private beforeYaml: string;
   private afterYaml: string;
   private modifiedAfterYaml: string;
   private diffStyle: DiffStyle;
   private diffContainer: HTMLElement | null = null;
+  private revisionInput: HTMLTextAreaElement | null = null;
+  private revisionCallback: FrontmatterRevisionCallback | null = null;
   private resolvePromise: ((value: DiffModalResult) => void) | null = null;
   private resolved = false;
 
@@ -24,12 +28,14 @@ export class DiffModal extends Modal {
     beforeYaml: string,
     afterYaml: string,
     diffStyle: DiffStyle,
+    revisionCallback?: FrontmatterRevisionCallback,
   ) {
     super(app);
     this.beforeYaml = beforeYaml;
     this.afterYaml = afterYaml;
     this.modifiedAfterYaml = afterYaml;
     this.diffStyle = diffStyle;
+    this.revisionCallback = revisionCallback || null;
   }
 
   async onOpen() {
@@ -41,6 +47,21 @@ export class DiffModal extends Modal {
 
     this.diffContainer = contentEl.createDiv({ cls: "diff-container" });
     await this.renderDiff();
+
+    // Revision input (only if callback provided)
+    if (this.revisionCallback) {
+      const revisionContainer = contentEl.createDiv({ cls: "revision-container" });
+      this.revisionInput = revisionContainer.createEl("textarea", {
+        cls: "revision-input",
+        attr: { placeholder: "Request revision (e.g., 'add more tags', 'change status to draft')..." },
+      });
+      
+      const reviseBtn = revisionContainer.createEl("button", {
+        text: "Revise",
+        cls: "mod-primary revision-btn",
+      });
+      reviseBtn.addEventListener("click", () => void this.handleRevision());
+    }
 
     const buttonContainer = contentEl.createDiv({ cls: "diff-buttons" });
 
@@ -61,6 +82,30 @@ export class DiffModal extends Modal {
       this.resolve({ applied: true, modifiedYaml: this.modifiedAfterYaml });
       this.close();
     });
+  }
+
+  private async handleRevision() {
+    if (!this.revisionCallback || !this.revisionInput) return;
+    
+    const instruction = this.revisionInput.value.trim();
+    if (!instruction) return;
+
+    // Disable input during revision
+    this.revisionInput.disabled = true;
+    const originalPlaceholder = this.revisionInput.placeholder;
+    this.revisionInput.placeholder = "Revising...";
+
+    try {
+      const revised = await this.revisionCallback(this.modifiedAfterYaml, instruction);
+      if (revised) {
+        this.modifiedAfterYaml = revised;
+        await this.renderDiff();
+        this.revisionInput.value = "";
+      }
+    } finally {
+      this.revisionInput.disabled = false;
+      this.revisionInput.placeholder = originalPlaceholder;
+    }
   }
 
   private async renderDiff() {
@@ -224,6 +269,7 @@ export async function showDiffModal(
   before: FrontmatterData | null,
   after: FrontmatterData,
   diffStyle: DiffStyle,
+  revisionCallback?: FrontmatterRevisionCallback,
 ): Promise<DiffModalResult | null> {
   const beforeYaml = before ? frontmatterToYaml(before) : "";
   const afterYaml = frontmatterToYaml(after);
@@ -236,7 +282,7 @@ export async function showDiffModal(
     return null;
   }
 
-  const modal = new DiffModal(app, beforeYaml, afterYaml, diffStyle);
+  const modal = new DiffModal(app, beforeYaml, afterYaml, diffStyle, revisionCallback);
   modal.open();
   return modal.waitForResult();
 }

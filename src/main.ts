@@ -1,7 +1,7 @@
 import { Notice, Plugin, MarkdownView, parseYaml, TFile } from "obsidian";
 import { ApplyOpenCodeSettings, DEFAULT_SETTINGS, ApplyOpenCodeSettingTab, parsePropertyList } from "./settings";
 import { parseFrontmatter, mergeFrontmatter, buildContent, orderFrontmatter, FrontmatterData } from "./frontmatter";
-import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent, identifyWikiLinks } from "./opencode";
+import { enhanceFrontmatter, enhanceFromTemplate, generateTitle, generateContent, reviseContent, reviseFrontmatter, identifyWikiLinks } from "./opencode";
 import { showDiffModal } from "./diff-modal";
 import { showContentDiffModal } from "./content-diff-modal";
 import { findSimilarNotes, collectVaultTags, getAllNoteTitles } from "./vault-search";
@@ -71,8 +71,19 @@ export default class ApplyOpenCodePlugin extends Plugin {
           const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
           console.debug("[Apply OpenCode] Merged and ordered result:", ordered);
 
+          // Revision callback for the diff modal
+          const revisionCallback = async (currentYaml: string, instruction: string): Promise<string | null> => {
+            return reviseFrontmatter({
+              opencodePath: this.settings.opencodePath,
+              model: this.settings.model,
+              noteContent: content,
+              currentYaml,
+              instruction,
+            });
+          };
+
           console.debug("[Apply OpenCode] Opening diff modal");
-          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle);
+          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle, revisionCallback);
           console.debug("[Apply OpenCode] Modal result:", result);
 
           if (result === null) {
@@ -150,7 +161,18 @@ export default class ApplyOpenCodePlugin extends Plugin {
           const merged = mergeFrontmatter(existing || {}, enhanceResult.frontmatter);
           const ordered = orderFrontmatter(merged, enhanceResult.propertyOrder);
 
-          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle);
+          // Revision callback for the diff modal
+          const revisionCallback = async (currentYaml: string, instruction: string): Promise<string | null> => {
+            return reviseFrontmatter({
+              opencodePath: this.settings.opencodePath,
+              model: this.settings.model,
+              noteContent: content,
+              currentYaml,
+              instruction,
+            });
+          };
+
+          const result = await showDiffModal(this.app, existing, ordered, this.settings.diffStyle, revisionCallback);
 
           if (result === null) {
             new Notice("No changes to apply.", 5000);
@@ -263,20 +285,35 @@ export default class ApplyOpenCodePlugin extends Plugin {
           // Build the proposed content with the generated text inserted/replaced
           const proposedContent = textBefore + generated + textAfter;
           
+          // Revision callback for the diff modal
+          const revisionCallback = async (currentContent: string, instruction: string): Promise<string | null> => {
+            const revised = await reviseContent({
+              opencodePath: this.settings.opencodePath,
+              model: this.settings.model,
+              title: file.basename,
+              frontmatter,
+              originalContent: content,
+              currentContent,
+              instruction,
+            });
+            return revised;
+          };
+
           // Show diff modal for review
           const result = await showContentDiffModal(
             this.app,
             content,
             proposedContent,
             this.settings.diffStyle,
-            hasSelection ? "Review generated replacement" : "Review generated content"
+            hasSelection ? "Review generated replacement" : "Review generated content",
+            revisionCallback
           );
 
           if (result === null) {
             new Notice("No changes to apply.", 5000);
           } else if (result.applied) {
             editor.setValue(result.modifiedContent);
-            new Notice(`Applied generated content (${generated.length} chars)`, 5000);
+            new Notice("Applied generated content", 5000);
           } else {
             new Notice("Changes discarded.", 5000);
           }

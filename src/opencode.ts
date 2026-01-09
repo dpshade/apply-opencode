@@ -482,6 +482,135 @@ ${isReplacement ? "Generate replacement content:" : "Generate content at cursor 
   return content;
 }
 
+export interface ContentRevisionOptions {
+  opencodePath: string;
+  model: string;
+  title: string;
+  frontmatter: FrontmatterData | null;
+  originalContent: string;
+  currentContent: string;
+  instruction: string;
+}
+
+export interface FrontmatterRevisionOptions {
+  opencodePath: string;
+  model: string;
+  noteContent: string;
+  currentYaml: string;
+  instruction: string;
+}
+
+/**
+ * Revise frontmatter based on user instruction
+ */
+export async function reviseFrontmatter(
+  options: FrontmatterRevisionOptions
+): Promise<string | null> {
+  const { body } = parseFrontmatter(options.noteContent);
+
+  const systemPrompt = `You are a frontmatter assistant. Revise the frontmatter YAML based on the user's instruction.
+
+RULES:
+1. Apply the user's requested changes to the current frontmatter
+2. Output ONLY valid YAML frontmatter - no markdown fences, no explanations
+3. Maintain proper YAML formatting
+4. Keep existing fields unless the user explicitly asks to remove them`;
+
+  const userPrompt = `NOTE CONTENT:
+${body.slice(0, 1500)}
+
+CURRENT FRONTMATTER:
+${options.currentYaml}
+
+REVISION INSTRUCTION: ${options.instruction}
+
+Output revised frontmatter YAML only:`;
+
+  const fullPrompt = systemPrompt + "\n\n" + userPrompt;
+
+  const response = await runOpenCode(options.opencodePath, options.model, fullPrompt);
+
+  if (!response || response.trim().length === 0) {
+    console.debug("[Apply OpenCode] Empty response from frontmatter revision");
+    return null;
+  }
+
+  // Clean up response
+  let yaml = response.trim();
+  if (yaml.startsWith("```yaml")) {
+    yaml = yaml.slice(7);
+  } else if (yaml.startsWith("```")) {
+    yaml = yaml.slice(3);
+  }
+  if (yaml.endsWith("```")) {
+    yaml = yaml.slice(0, -3);
+  }
+  yaml = yaml.trim();
+
+  // Ensure trailing newline
+  if (!yaml.endsWith("\n")) {
+    yaml += "\n";
+  }
+
+  return yaml;
+}
+
+/**
+ * Revise generated content based on user instruction
+ */
+export async function reviseContent(
+  options: ContentRevisionOptions
+): Promise<string | null> {
+  const frontmatterContext = options.frontmatter
+    ? Object.entries(options.frontmatter)
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join("\n")
+    : "(no frontmatter)";
+
+  const systemPrompt = `You are a writing assistant. Revise the content based on the user's instruction.
+
+RULES:
+1. Apply the user's requested changes to the current content
+2. Maintain consistency with the original document context
+3. Output ONLY the revised full content - no explanations, no markdown fences, no meta-commentary
+4. Keep the same general structure unless the user asks for structural changes`;
+
+  const userPrompt = `NOTE TITLE: ${options.title}
+
+FRONTMATTER:
+${frontmatterContext}
+
+ORIGINAL DOCUMENT:
+${options.originalContent.slice(0, 2000)}
+
+CURRENT CONTENT TO REVISE:
+${options.currentContent}
+
+REVISION INSTRUCTION: ${options.instruction}
+
+Output the revised content:`;
+
+  const fullPrompt = systemPrompt + "\n\n" + userPrompt;
+
+  const response = await runOpenCode(options.opencodePath, options.model, fullPrompt);
+
+  if (!response || response.trim().length === 0) {
+    console.debug("[Apply OpenCode] Empty response from content revision");
+    return null;
+  }
+
+  // Clean up any markdown fences
+  let content = response.trim();
+  if (content.startsWith("```")) {
+    const endFence = content.lastIndexOf("```");
+    if (endFence > 3) {
+      content = content.slice(content.indexOf("\n") + 1, endFence).trim();
+    }
+  }
+
+  return content;
+}
+
 export interface WikiLinkOptions {
   opencodePath: string;
   model: string;

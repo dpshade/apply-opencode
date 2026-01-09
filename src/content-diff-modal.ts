@@ -7,6 +7,8 @@ export interface ContentDiffModalResult {
   modifiedContent: string;
 }
 
+export type RevisionCallback = (currentContent: string, instruction: string) => Promise<string | null>;
+
 export class ContentDiffModal extends Modal {
   private beforeContent: string;
   private afterContent: string;
@@ -14,6 +16,8 @@ export class ContentDiffModal extends Modal {
   private diffStyle: DiffStyle;
   private title: string;
   private diffContainer: HTMLElement | null = null;
+  private revisionInput: HTMLTextAreaElement | null = null;
+  private revisionCallback: RevisionCallback | null = null;
   private resolvePromise: ((value: ContentDiffModalResult) => void) | null = null;
   private resolved = false;
 
@@ -23,6 +27,7 @@ export class ContentDiffModal extends Modal {
     afterContent: string,
     diffStyle: DiffStyle,
     title = "Review content changes",
+    revisionCallback?: RevisionCallback,
   ) {
     super(app);
     this.beforeContent = beforeContent;
@@ -30,6 +35,7 @@ export class ContentDiffModal extends Modal {
     this.modifiedContent = afterContent;
     this.diffStyle = diffStyle;
     this.title = title;
+    this.revisionCallback = revisionCallback || null;
   }
 
   async onOpen() {
@@ -40,6 +46,21 @@ export class ContentDiffModal extends Modal {
 
     this.diffContainer = contentEl.createDiv({ cls: "diff-container" });
     await this.renderDiff();
+
+    // Revision input (only if callback provided)
+    if (this.revisionCallback) {
+      const revisionContainer = contentEl.createDiv({ cls: "revision-container" });
+      this.revisionInput = revisionContainer.createEl("textarea", {
+        cls: "revision-input",
+        attr: { placeholder: "Request revision (e.g., 'make it shorter', 'more formal tone')..." },
+      });
+      
+      const reviseBtn = revisionContainer.createEl("button", {
+        text: "Revise",
+        cls: "mod-primary revision-btn",
+      });
+      reviseBtn.addEventListener("click", () => void this.handleRevision());
+    }
 
     const buttonContainer = contentEl.createDiv({ cls: "diff-buttons" });
 
@@ -60,6 +81,30 @@ export class ContentDiffModal extends Modal {
       this.resolve({ applied: true, modifiedContent: this.modifiedContent });
       this.close();
     });
+  }
+
+  private async handleRevision() {
+    if (!this.revisionCallback || !this.revisionInput) return;
+    
+    const instruction = this.revisionInput.value.trim();
+    if (!instruction) return;
+
+    // Disable input during revision
+    this.revisionInput.disabled = true;
+    const originalPlaceholder = this.revisionInput.placeholder;
+    this.revisionInput.placeholder = "Revising...";
+
+    try {
+      const revised = await this.revisionCallback(this.modifiedContent, instruction);
+      if (revised) {
+        this.modifiedContent = revised;
+        await this.renderDiff();
+        this.revisionInput.value = "";
+      }
+    } finally {
+      this.revisionInput.disabled = false;
+      this.revisionInput.placeholder = originalPlaceholder;
+    }
   }
 
   private async renderDiff() {
@@ -203,13 +248,14 @@ export async function showContentDiffModal(
   after: string,
   diffStyle: DiffStyle,
   title = "Review content changes",
+  revisionCallback?: RevisionCallback,
 ): Promise<ContentDiffModalResult | null> {
   if (before === after) {
     console.debug("[Apply OpenCode] No changes detected, skipping modal");
     return null;
   }
 
-  const modal = new ContentDiffModal(app, before, after, diffStyle, title);
+  const modal = new ContentDiffModal(app, before, after, diffStyle, title, revisionCallback);
   modal.open();
   return modal.waitForResult();
 }

@@ -365,3 +365,47 @@
   background: var(--background-secondary);
   border-top: 1px solid var(--background-modifier-border);
 }
+
+/* Revision input in diff modal */
+.revision-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+.revision-input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  resize: none;
+  min-height: 36px;
+  max-height: 80px;
+  font-family: inherit;
+}
+
+.revision-input::placeholder {
+  color: var(--text-faint);
+}
+
+.revision-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.revision-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.revision-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
