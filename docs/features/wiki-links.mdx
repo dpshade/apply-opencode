@@ -1,0 +1,24 @@
+---
+title: Wiki Link Identification
+description: Identify entities that should become wiki links
+---
+
+## Features
+
+- Two strategies: **existing notes only** (instant) or **all entities via AI**
+- Configurable mode: first mention only or all mentions
+- Shows diff preview before applying
+- Smart selection: processes selection if present, otherwise full note
+- **Safety guaranteed**: only adds `[[` and `]]` brackets, never modifies content
+
+## Usage
+
+1. Open a note (optionally select specific text)
+2. Run: **Apply OpenCode: Identify and add wiki links**
+3. Review the diff showing proposed wiki links
+4. Click on any green line to remove that link
+5. Click **Apply changes** to add the wiki links
+
+<Warning>
+The "all entities via AI" strategy is slower but finds entities that don't yet have notes in your vault.
+</Warning>

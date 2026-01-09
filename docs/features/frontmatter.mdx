@@ -1,0 +1,34 @@
+---
+title: Frontmatter Enhancement
+description: AI-powered frontmatter suggestions based on your vault
+---
+
+## How It Works
+
+<Steps>
+  <Step title="Find similar notes">
+    Scores all notes with frontmatter by superset matching, links, tags, folder, recency
+  </Step>
+  <Step title="Extract schema">
+    Builds list of valid properties from top 5 similar notes
+  </Step>
+  <Step title="Generate enhancement">
+    Sends note + examples to OpenCode, requests YAML frontmatter
+  </Step>
+  <Step title="Merge carefully">
+    Adds new properties, extends arrays, **never overwrites existing values**
+  </Step>
+  <Step title="Review & apply">
+    Shows diff modal for your approval
+  </Step>
+</Steps>
+
+## Usage
+
+1. Open a note
+2. Run command: **Apply OpenCode: Enhance note frontmatter**
+3. Review diff and apply changes
+
+<Info>
+The AI learns from your existing notes - the more consistent your vault's frontmatter, the better the suggestions.
+</Info>

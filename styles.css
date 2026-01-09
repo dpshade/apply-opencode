@@ -398,33 +398,30 @@
 }
 
 /* Revision input in diff modal */
-.revision-wrapper {
-  margin-top: auto; /* Push to bottom if space allows */
-  margin-bottom: 20px;
-  background: var(--background-secondary-alt);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
-}
-
-.revision-input-container {
+.revision-container {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
 }
 
 .revision-input {
   flex: 1;
-  padding: 10px 12px;
+  padding: 12px 14px;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--background-primary);
   color: var(--text-normal);
   resize: none;
-  min-height: 42px; /* Sufficient for 2 lines usually, or 1 line + padding */
-  max-height: 120px;
+  min-height: 44px;
+  max-height: 100px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -436,38 +433,41 @@
 .revision-input:focus {
   outline: none;
   border-color: var(--interactive-accent);
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
 }
 
 .revision-input:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   background: var(--background-secondary);
 }
 
 .revision-btn {
-  height: 42px; /* Match input height roughly */
-  padding: 0 20px;
-  border-radius: 6px;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.revision-btn svg {
-  width: 16px;
-  height: 16px;
+.revision-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
-.revision-hint {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: right;
-  padding-right: 4px;
+.revision-btn:active {
+  transform: translateY(0);
+}
+
+.revision-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
