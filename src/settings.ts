@@ -277,7 +277,7 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             btn.setButtonText("Renaming...");
             await this.bulkRenameUntitled(untitledFiles);
             // Refresh the settings display
-            await this.display();
+            this.display();
           })
       );
     }
@@ -297,7 +297,7 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
             btn.setDisabled(true);
             btn.setButtonText("Enhancing...");
             await this.bulkEnhanceFrontmatter(noFrontmatterFiles);
-            await this.display();
+            this.display();
           })
       );
     }
