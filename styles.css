@@ -8,6 +8,108 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
+/* ==========================================
+   UNIFIED BUTTON SYSTEM
+   ========================================== */
+
+/* Base button styles */
+.aoc-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  height: 36px;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.aoc-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* Primary button (main action) */
+.aoc-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.aoc-btn-primary:hover {
+  background: var(--interactive-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.aoc-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.aoc-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary button (cancel, dismiss) */
+.aoc-btn-secondary {
+  background: transparent;
+  border-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.aoc-btn-secondary:hover {
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.aoc-btn-secondary:active {
+  background: var(--background-modifier-active-hover);
+}
+
+/* Destructive/warning button */
+.aoc-btn-destructive {
+  background: transparent;
+  border-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.aoc-btn-destructive:hover {
+  color: var(--text-error);
+  border-color: var(--text-error);
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+/* Ghost button (minimal) */
+.aoc-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 12px;
+}
+
+.aoc-btn-ghost:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+/* Button group container */
+.aoc-btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 /* Style the modal itself (class applied to .modal element) */
 .modal.apply-opencode-diff-modal {
   width: 80vw !important;
@@ -149,50 +251,54 @@
   justify-content: flex-end;
   gap: 12px;
   padding-top: 0;
-  margin-top: auto; /* Push to bottom */
+  margin-top: auto;
   flex-shrink: 0;
 }
 
+/* Use unified button system - keeping legacy classes for compatibility */
 .diff-buttons button {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 8px 20px;
   border-radius: 6px;
   font-weight: 600;
-  padding: 8px 20px;
-  cursor: pointer;
-  height: 40px;
   font-size: 14px;
+  cursor: pointer;
+  height: 36px;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.diff-buttons button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.diff-buttons button:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.diff-buttons button.mod-cta {
-  background-color: var(--interactive-accent);
+.diff-buttons button.mod-cta,
+.diff-buttons button.aoc-btn-primary {
+  background: var(--interactive-accent);
   color: var(--text-on-accent);
-  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.diff-buttons button.mod-cta:hover {
-  background-color: var(--interactive-accent-hover);
+.diff-buttons button.mod-cta:hover,
+.diff-buttons button.aoc-btn-primary:hover {
+  background: var(--interactive-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.diff-buttons button.mod-warning {
-  background-color: transparent;
+.diff-buttons button.mod-cta:active,
+.diff-buttons button.aoc-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.diff-buttons button.mod-warning,
+.diff-buttons button.aoc-btn-secondary {
+  background: transparent;
+  border-color: var(--background-modifier-border);
   color: var(--text-muted);
-  border: 1px solid var(--background-modifier-border);
 }
 
-.diff-buttons button.mod-warning:hover {
-  color: var(--text-error);
-  border-color: var(--background-modifier-error);
-  background-color: var(--background-modifier-error-hover);
+.diff-buttons button.mod-warning:hover,
+.diff-buttons button.aoc-btn-secondary:hover {
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
 .diff-line {
@@ -289,9 +395,27 @@
 }
 
 .apply-opencode-progress .progress-buttons button {
-  padding: 6px 16px;
+  padding: 8px 20px;
   border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
+  height: 36px;
+  border: 1px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apply-opencode-progress .progress-buttons button:hover {
+  border-color: var(--text-normal);
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.apply-opencode-progress .progress-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Template Picker Modal */
@@ -455,36 +579,36 @@
   cursor: not-allowed;
 }
 
+/* Revision button - compact pill variant of primary button */
 .revision-btn {
   flex-shrink: 0;
   height: 32px;
   min-height: 32px;
   padding: 0 16px;
-  border-radius: 16px;
+  border-radius: 16px; /* Pill shape for inline context */
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
   background: var(--interactive-accent);
-  color: var(--text-on-accent, #fff);
+  color: var(--text-on-accent);
   border: none;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1px; /* Optical alignment with text */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .revision-btn:hover:not(:disabled) {
-  background: var(--interactive-accent-hover, var(--interactive-accent));
+  background: var(--interactive-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  filter: brightness(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .revision-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .revision-btn:disabled {
@@ -632,6 +756,17 @@
   outline: none;
 }
 
+.file-create-description.has-error {
+  border-color: var(--text-error);
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 /* Location & Name */
 .file-create-filename-group {
   display: flex;
@@ -730,42 +865,50 @@
   background: var(--background-secondary);
 }
 
+/* File create buttons use unified system */
 .file-create-footer button {
   padding: 8px 20px;
   border-radius: 6px;
   font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
   height: 36px;
-  font-size: 14px;
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.file-create-btn-cancel {
+.file-create-btn-cancel,
+.file-create-footer .aoc-btn-secondary {
   background: transparent;
   border-color: var(--background-modifier-border);
   color: var(--text-muted);
 }
 
-.file-create-btn-cancel:hover {
+.file-create-btn-cancel:hover,
+.file-create-footer .aoc-btn-secondary:hover {
   border-color: var(--text-normal);
   color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
-.file-create-btn-create {
+.file-create-btn-create,
+.file-create-footer .aoc-btn-primary {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.file-create-btn-create:hover {
+.file-create-btn-create:hover,
+.file-create-footer .aoc-btn-primary:hover {
   background: var(--interactive-accent-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.file-create-btn-create:active {
+.file-create-btn-create:active,
+.file-create-footer .aoc-btn-primary:active {
   transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Type specific accents */

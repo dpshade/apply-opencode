@@ -10,12 +10,25 @@ import { loadTemplateSchemas, TemplateSchema } from "./template-schema";
 import { TemplatePickerModal } from "./template-picker-modal";
 import { showContentInputModal } from "./content-input-modal";
 import { generateWikiLinks, validateWikiLinkChanges } from "./wiki-link-generator";
+import { getSkillManager, SkillCache } from "./skills";
+import { generateBase, editBase, validateBase, suggestBaseFilename } from "./base-generator";
+import { generateCanvas, editCanvas, validateCanvas, suggestCanvasFilename } from "./canvas-generator";
+import { showFileCreateModal } from "./file-create-modal";
+
+interface PluginData {
+  settings?: Partial<ApplyOpenCodeSettings>;
+  skillCache?: SkillCache;
+}
 
 export default class ApplyOpenCodePlugin extends Plugin {
   settings: ApplyOpenCodeSettings;
+  private skillManager = getSkillManager();
 
   async onload() {
     await this.loadSettings();
+
+    // Initialize skill manager and check for updates silently
+    void this.initializeSkills();
 
     this.addCommand({
       id: "enhance-frontmatter",
@@ -425,7 +438,329 @@ export default class ApplyOpenCodePlugin extends Plugin {
       await this.generateTitleForFile(activeFile);
     });
 
+    // Create Base command
+    this.addCommand({
+      id: "create-base",
+      name: "Create Obsidian base",
+      callback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        const defaultFolder = activeFile?.parent?.path || "";
+
+        const result = await showFileCreateModal(
+          this.app,
+          "base",
+          suggestBaseFilename,
+          defaultFolder
+        );
+
+        if (result.cancelled) {
+          return;
+        }
+
+        const loadingNotice = new Notice("Generating base...", 0);
+
+        try {
+          const content = await generateBase(result.description, {
+            opencodePath: this.settings.opencodePath,
+            model: this.settings.model,
+          });
+
+          loadingNotice.hide();
+
+          // Validate the generated content
+          const validation = validateBase(content);
+          if (!validation.valid) {
+            new Notice(`Generated Base is invalid: ${validation.error}`, 10000);
+            console.error("[Apply OpenCode] Base validation failed:", validation.error);
+            console.debug("[Apply OpenCode] Generated content:", content);
+            return;
+          }
+
+          // Create the file
+          const filename = result.filename.endsWith(".base")
+            ? result.filename
+            : `${result.filename}.base`;
+          const filePath = result.folder
+            ? `${result.folder}/${filename}`
+            : filename;
+
+          // Check if file already exists
+          const existing = this.app.vault.getAbstractFileByPath(filePath);
+          if (existing) {
+            new Notice(`File already exists: ${filePath}`, 10000);
+            return;
+          }
+
+          await this.app.vault.create(filePath, content);
+          
+          // Open the new file
+          const newFile = this.app.vault.getAbstractFileByPath(filePath);
+          if (newFile instanceof TFile) {
+            await this.app.workspace.getLeaf().openFile(newFile);
+          }
+
+          new Notice(`Created: ${filePath}`, 6000);
+        } catch (err) {
+          loadingNotice.hide();
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to create Base: ${message}`, 10000);
+          console.error("[Apply OpenCode] Create Base error:", err);
+        }
+      },
+    });
+
+    // Edit Base command
+    this.addCommand({
+      id: "edit-base",
+      name: "Edit current base",
+      checkCallback: (checking) => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.extension !== "base") {
+          return false;
+        }
+        if (checking) {
+          return true;
+        }
+        void this.editCurrentBase(activeFile);
+        return true;
+      },
+    });
+
+    // Create Canvas command
+    this.addCommand({
+      id: "create-canvas",
+      name: "Create canvas",
+      callback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        const defaultFolder = activeFile?.parent?.path || "";
+
+        const result = await showFileCreateModal(
+          this.app,
+          "canvas",
+          suggestCanvasFilename,
+          defaultFolder
+        );
+
+        if (result.cancelled) {
+          return;
+        }
+
+        const loadingNotice = new Notice("Generating canvas...", 0);
+
+        try {
+          const content = await generateCanvas(result.description, {
+            opencodePath: this.settings.opencodePath,
+            model: this.settings.model,
+          });
+
+          loadingNotice.hide();
+
+          // Validate the generated content
+          const validation = validateCanvas(content);
+          if (!validation.valid) {
+            new Notice(`Generated Canvas is invalid: ${validation.error}`, 10000);
+            console.error("[Apply OpenCode] Canvas validation failed:", validation.error);
+            console.debug("[Apply OpenCode] Generated content:", content);
+            return;
+          }
+
+          // Create the file
+          const filename = result.filename.endsWith(".canvas")
+            ? result.filename
+            : `${result.filename}.canvas`;
+          const filePath = result.folder
+            ? `${result.folder}/${filename}`
+            : filename;
+
+          // Check if file already exists
+          const existing = this.app.vault.getAbstractFileByPath(filePath);
+          if (existing) {
+            new Notice(`File already exists: ${filePath}`, 10000);
+            return;
+          }
+
+          await this.app.vault.create(filePath, content);
+          
+          // Open the new file
+          const newFile = this.app.vault.getAbstractFileByPath(filePath);
+          if (newFile instanceof TFile) {
+            await this.app.workspace.getLeaf().openFile(newFile);
+          }
+
+          new Notice(`Created: ${filePath}`, 6000);
+        } catch (err) {
+          loadingNotice.hide();
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to create Canvas: ${message}`, 10000);
+          console.error("[Apply OpenCode] Create Canvas error:", err);
+        }
+      },
+    });
+
+    // Edit Canvas command
+    this.addCommand({
+      id: "edit-canvas",
+      name: "Edit current canvas",
+      checkCallback: (checking) => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.extension !== "canvas") {
+          return false;
+        }
+        if (checking) {
+          return true;
+        }
+        void this.editCurrentCanvas(activeFile);
+        return true;
+      },
+    });
+
     this.addSettingTab(new ApplyOpenCodeSettingTab(this.app, this));
+  }
+
+  /**
+   * Initialize skill manager and check for updates from GitHub
+   */
+  private async initializeSkills(): Promise<void> {
+    try {
+      await this.skillManager.checkForUpdates();
+      // Save updated cache
+      await this.saveSkillCache();
+    } catch (err) {
+      // Silent failure - skills will use embedded fallbacks
+      console.debug("[Apply OpenCode] Skill update check failed:", err);
+    }
+  }
+
+  /**
+   * Save skill cache to plugin data
+   */
+  private async saveSkillCache(): Promise<void> {
+    const data = await this.loadData() as PluginData | null;
+    const newData: PluginData = {
+      ...data,
+      skillCache: this.skillManager.getCache(),
+    };
+    await this.saveData(newData);
+  }
+
+  /**
+   * Edit the currently open .base file
+   */
+  private async editCurrentBase(file: TFile): Promise<void> {
+    const inputResult = await showContentInputModal(this.app, false);
+    if (inputResult.cancelled || !inputResult.instruction.trim()) {
+      return;
+    }
+
+    let currentContent: string;
+    try {
+      currentContent = await this.app.vault.read(file);
+    } catch {
+      new Notice("Cannot read file content", 10000);
+      return;
+    }
+
+    const loadingNotice = new Notice("Editing base...", 0);
+
+    try {
+      const modified = await editBase(currentContent, inputResult.instruction, {
+        opencodePath: this.settings.opencodePath,
+        model: this.settings.model,
+      });
+
+      loadingNotice.hide();
+
+      // Validate the modified content
+      const validation = validateBase(modified);
+      if (!validation.valid) {
+        new Notice(`Modified Base is invalid: ${validation.error}`, 10000);
+        console.error("[Apply OpenCode] Base validation failed:", validation.error);
+        return;
+      }
+
+      // Show diff modal
+      const result = await showContentDiffModal(
+        this.app,
+        currentContent,
+        modified,
+        this.settings.diffStyle,
+        "Review base changes"
+      );
+
+      if (result === null) {
+        new Notice("No changes to apply.", 5000);
+      } else if (result.applied) {
+        await this.app.vault.modify(file, result.modifiedContent);
+        new Notice("Base updated.", 6000);
+      } else {
+        new Notice("Changes discarded.", 5000);
+      }
+    } catch (err) {
+      loadingNotice.hide();
+      const message = err instanceof Error ? err.message : String(err);
+      new Notice(`Failed to edit Base: ${message}`, 10000);
+      console.error("[Apply OpenCode] Edit Base error:", err);
+    }
+  }
+
+  /**
+   * Edit the currently open .canvas file
+   */
+  private async editCurrentCanvas(file: TFile): Promise<void> {
+    const inputResult = await showContentInputModal(this.app, false);
+    if (inputResult.cancelled || !inputResult.instruction.trim()) {
+      return;
+    }
+
+    let currentContent: string;
+    try {
+      currentContent = await this.app.vault.read(file);
+    } catch {
+      new Notice("Cannot read file content", 10000);
+      return;
+    }
+
+    const loadingNotice = new Notice("Editing canvas...", 0);
+
+    try {
+      const modified = await editCanvas(currentContent, inputResult.instruction, {
+        opencodePath: this.settings.opencodePath,
+        model: this.settings.model,
+      });
+
+      loadingNotice.hide();
+
+      // Validate the modified content
+      const validation = validateCanvas(modified);
+      if (!validation.valid) {
+        new Notice(`Modified Canvas is invalid: ${validation.error}`, 10000);
+        console.error("[Apply OpenCode] Canvas validation failed:", validation.error);
+        return;
+      }
+
+      // Show diff modal
+      const result = await showContentDiffModal(
+        this.app,
+        currentContent,
+        modified,
+        this.settings.diffStyle,
+        "Review canvas changes"
+      );
+
+      if (result === null) {
+        new Notice("No changes to apply.", 5000);
+      } else if (result.applied) {
+        await this.app.vault.modify(file, result.modifiedContent);
+        new Notice("Canvas updated.", 6000);
+      } else {
+        new Notice("Changes discarded.", 5000);
+      }
+    } catch (err) {
+      loadingNotice.hide();
+      const message = err instanceof Error ? err.message : String(err);
+      new Notice(`Failed to edit Canvas: ${message}`, 10000);
+      console.error("[Apply OpenCode] Edit Canvas error:", err);
+    }
   }
 
   async generateTitleForFile(file: TFile): Promise<boolean> {
@@ -538,11 +873,20 @@ export default class ApplyOpenCodePlugin extends Plugin {
   }
 
   async loadSettings() {
-    const data = await this.loadData() as Partial<ApplyOpenCodeSettings> | null;
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
+    const data = await this.loadData() as PluginData | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data?.settings ?? {});
+    
+    // Load skill cache
+    if (data?.skillCache) {
+      this.skillManager.loadCache(data.skillCache);
+    }
   }
 
   async saveSettings() {
-    await this.saveData(this.settings);
+    const data: PluginData = {
+      settings: this.settings,
+      skillCache: this.skillManager.getCache(),
+    };
+    await this.saveData(data);
   }
 }

@@ -51,7 +51,7 @@ export class ProgressModal extends Modal {
 
     // Cancel button
     const btnContainer = contentEl.createDiv({ cls: "progress-buttons" });
-    this.cancelBtn = btnContainer.createEl("button", { text: "Cancel" });
+    this.cancelBtn = btnContainer.createEl("button", { text: "Cancel", cls: "aoc-btn aoc-btn-secondary" });
     this.cancelBtn.addEventListener("click", () => {
       this.state.cancelled = true;
       this.cancelBtn.disabled = true;

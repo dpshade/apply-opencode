@@ -134,10 +134,10 @@ export class FileCreateModal extends Modal {
     // --- Footer ---
     const footer = contentEl.createDiv({ cls: "file-create-footer" });
     
-    const cancelBtn = footer.createEl("button", { cls: "file-create-btn-cancel", text: "Cancel" });
+    const cancelBtn = footer.createEl("button", { cls: "aoc-btn aoc-btn-secondary", text: "Cancel" });
     cancelBtn.addEventListener("click", () => this.cancel());
 
-    const createBtn = footer.createEl("button", { cls: "file-create-btn-create", text: "Create" });
+    const createBtn = footer.createEl("button", { cls: "aoc-btn aoc-btn-primary", text: "Create" });
     createBtn.addEventListener("click", () => this.submit());
 
     // --- Event Listeners ---
@@ -216,8 +216,8 @@ export class FileCreateModal extends Modal {
     if (!this.description.trim()) {
       const descInput = this.contentEl.querySelector(".file-create-description") as HTMLElement;
       if (descInput) {
-        descInput.style.borderColor = "var(--text-error)";
-        setTimeout(() => descInput.style.borderColor = "", 2000);
+        descInput.addClass("has-error");
+        setTimeout(() => descInput.removeClass("has-error"), 2000);
         descInput.focus();
       }
       return;

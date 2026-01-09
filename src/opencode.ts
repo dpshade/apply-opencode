@@ -4,6 +4,7 @@ import { SimilarNote, formatExamplesForPrompt, ExamplesPromptData } from "./vaul
 import { TitleExtractor, TITLE_GENERATION_PROMPT } from "./title-generator";
 import { TemplateSchema, formatSchemaForPrompt } from "./template-schema";
 import { WikiLinkSpan } from "./wiki-link-generator";
+import { getSkillManager } from "./skills";
 
 export interface OpenCodeOptions {
   opencodePath: string;
@@ -380,8 +381,20 @@ export async function generateTitle(
 }
 
 function buildContentGenerationPrompt(instruction?: string, isReplacement = false): string {
+  // Get obsidian-markdown skill for syntax awareness
+  const skillManager = getSkillManager();
+  const markdownSkill = skillManager.getSkill("obsidian-markdown");
+  
+  // Extract just the syntax reference portion (truncated for prompt efficiency)
+  const syntaxContext = markdownSkill.length > 3000 
+    ? markdownSkill.slice(0, 3000) + "\n...[truncated]"
+    : markdownSkill;
+
   const baseRules = isReplacement
-    ? `You are a writing assistant. Replace the selected text based on the context provided.
+    ? `You are a writing assistant for Obsidian notes. Replace the selected text based on the context provided.
+
+OBSIDIAN MARKDOWN SYNTAX REFERENCE:
+${syntaxContext}
 
 RULES:
 1. Write 500-1000 characters of content unless the user specifies otherwise
@@ -389,8 +402,12 @@ RULES:
 3. Use the note title and frontmatter as additional context for relevance
 4. Output ONLY the replacement text - no explanations, no markdown fences, no meta-commentary
 5. The replacement should fit naturally between the text before and after the selection
-6. Consider what the selected text was about when writing the replacement`
-    : `You are a writing assistant. Generate content based on the context provided.
+6. Consider what the selected text was about when writing the replacement
+7. Use proper Obsidian syntax: [[wikilinks]], callouts, embeds, etc. when appropriate`
+    : `You are a writing assistant for Obsidian notes. Generate content based on the context provided.
+
+OBSIDIAN MARKDOWN SYNTAX REFERENCE:
+${syntaxContext}
 
 RULES:
 1. Write 500-1000 characters of content unless the user specifies otherwise
@@ -398,11 +415,12 @@ RULES:
 3. Use the note title and frontmatter as additional context for relevance
 4. Output ONLY the generated text - no explanations, no markdown fences, no meta-commentary
 5. Do not repeat or rephrase the existing content
-6. If there is text after the cursor position, write content that bridges naturally to it`;
+6. If there is text after the cursor position, write content that bridges naturally to it
+7. Use proper Obsidian syntax: [[wikilinks]], callouts, embeds, etc. when appropriate`;
 
   if (instruction) {
     return `${baseRules}
-7. Follow the user's specific instruction for what to write
+8. Follow the user's specific instruction for what to write
 
 USER INSTRUCTION: ${instruction}
 

@@ -57,7 +57,7 @@ export class ContentDiffModal extends Modal {
       
       const reviseBtn = revisionContainer.createEl("button", {
         text: "Revise",
-        cls: "mod-primary revision-btn",
+        cls: "revision-btn",
       });
       reviseBtn.addEventListener("click", () => void this.handleRevision());
     }
@@ -66,7 +66,7 @@ export class ContentDiffModal extends Modal {
 
     const cancelBtn = buttonContainer.createEl("button", {
       text: "Cancel",
-      cls: "mod-warning",
+      cls: "aoc-btn aoc-btn-secondary",
     });
     cancelBtn.addEventListener("click", () => {
       this.resolve({ applied: false, modifiedContent: this.modifiedContent });
@@ -75,7 +75,7 @@ export class ContentDiffModal extends Modal {
 
     const applyBtn = buttonContainer.createEl("button", {
       text: "Apply changes",
-      cls: "mod-cta",
+      cls: "aoc-btn aoc-btn-primary",
     });
     applyBtn.addEventListener("click", () => {
       this.resolve({ applied: true, modifiedContent: this.modifiedContent });
