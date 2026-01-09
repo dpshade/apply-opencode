@@ -1,0 +1,230 @@
+@keyframes afm-modal-pop {
+  0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes afm-slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.auto-frontmatter-diff-modal {
+  padding: 24px;
+  max-width: 95vw;
+  width: 95vw;
+  animation: afm-modal-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override Obsidian's default modal width constraints */
+.modal-container .modal:has(.auto-frontmatter-diff-modal) {
+  width: 95vw !important;
+  max-width: 95vw !important;
+  overflow: hidden !important;
+}
+
+/* Prevent horizontal scroll on the modal content */
+.modal-content.auto-frontmatter-diff-modal {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.auto-frontmatter-diff-modal h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auto-frontmatter-diff-modal h2::before {
+  content: "✨";
+  font-size: 1.2em;
+  animation: afm-modal-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+}
+
+.diff-container {
+  border: none;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100%;
+  background: var(--background-secondary);
+}
+
+/* Force the @pierre/diffs element to not cause overflow */
+.diff-container > [data-diffs] {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Force each code panel in split view to stay within bounds */
+.diff-container [data-diffs][data-type="split"] [data-code] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.diff-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.diff-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.diff-container::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-bg);
+  border-radius: 5px;
+  border: 2px solid var(--background-primary);
+}
+
+.diff-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-active-thumb-bg);
+}
+
+/* Styling for the diff table */
+.diff-container [data-diffs] {
+  background: var(--background-secondary);
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.diff-container pre {
+  margin: 0;
+  background: transparent !important;
+}
+
+.diff-container code {
+  font-family: var(--font-monospace);
+  font-size: 13px;
+}
+
+.diff-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.diff-buttons button {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 6px 18px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.diff-buttons button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.diff-buttons button:active {
+  transform: translateY(0) scale(0.96);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.diff-buttons button.mod-cta {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.diff-buttons button.mod-cta:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+.diff-buttons button.mod-cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: 0.5s;
+}
+
+.diff-buttons button.mod-cta:hover::after {
+  left: 150%;
+  transition: 0.7s ease-in-out;
+}
+
+.diff-buttons button.mod-warning {
+  opacity: 0.8;
+}
+
+.diff-buttons button.mod-warning:hover {
+  opacity: 1;
+  background-color: var(--background-modifier-error-hover);
+  color: var(--text-on-accent);
+}
+
+.diff-line {
+  display: flex;
+  flex-direction: row;
+  padding: 0 8px;
+  min-height: 20px;
+}
+
+.diff-prefix {
+  width: 20px;
+  flex-shrink: 0;
+  user-select: none;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.diff-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-removed {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: var(--text-normal);
+}
+
+.diff-removed .diff-prefix {
+  color: rgb(248, 81, 73);
+}
+
+.diff-removed .diff-content {
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.diff-added {
+  background-color: rgba(46, 160, 67, 0.15);
+  color: var(--text-normal);
+}
+
+.diff-added .diff-prefix {
+  color: rgb(46, 160, 67);
+}
+
+.diff-unchanged {
+  color: var(--text-muted);
+}
