@@ -1,7 +1,7 @@
 {
   "id": "apply-opencode",
   "name": "Apply OpenCode",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "minAppVersion": "1.0.0",
   "description": "AI-powered frontmatter enhancement, title generation, content generation, and wiki link identification.",
   "author": "Dylan Shade",

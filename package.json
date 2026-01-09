@@ -1,6 +1,6 @@
 {
   "name": "apply-opencode",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "Use OpenCode to enhance your notes with AI-powered frontmatter suggestions",
   "main": "main.js",
   "scripts": {
