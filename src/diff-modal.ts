@@ -89,9 +89,13 @@ export class DiffModal extends Modal {
         },
       });
 
-      // Use createEl and append to safely render HTML without direct innerHTML
+      // Safely parse and append HTML using DOMParser
       const diffWrapper = this.diffContainer.createDiv();
-      diffWrapper.innerHTML = diffHtml;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(diffHtml, "text/html");
+      while (doc.body.firstChild) {
+        diffWrapper.appendChild(doc.body.firstChild);
+      }
       this.attachClickHandlers();
     } catch (err) {
       console.error(
@@ -228,7 +232,7 @@ export async function showDiffModal(
   console.debug("[Apply OpenCode] Diff modal - after:", afterYaml);
 
   if (beforeYaml === afterYaml) {
-    console.info("[Apply OpenCode] No changes detected, skipping modal");
+    console.debug("[Apply OpenCode] No changes detected, skipping modal");
     return null;
   }
 

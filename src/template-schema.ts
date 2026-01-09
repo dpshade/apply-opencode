@@ -92,7 +92,7 @@ function extractSchemaFromFrontmatter(frontmatter: FrontmatterData, path: string
  * 2. Files with "template" in the name
  * 3. Files in any folder named *template*
  */
-export async function findTemplateFiles(app: App): Promise<TFile[]> {
+export function findTemplateFiles(app: App): TFile[] {
   const templates: TFile[] = [];
   const seen = new Set<string>();
   
@@ -123,11 +123,11 @@ export async function findTemplateFiles(app: App): Promise<TFile[]> {
 /**
  * Find the best matching template for a file based on folder or content
  */
-export async function findMatchingTemplate(
-  app: App,
+export function findMatchingTemplate(
+  _app: App,
   file: TFile,
   templates: TemplateSchema[]
-): Promise<TemplateSchema | null> {
+): TemplateSchema | null {
   if (templates.length === 0) return null;
   
   const folder = file.parent?.path || "";
@@ -151,7 +151,7 @@ export async function findMatchingTemplate(
  * Load all template schemas from the vault
  */
 export async function loadTemplateSchemas(app: App): Promise<TemplateSchema[]> {
-  const templateFiles = await findTemplateFiles(app);
+  const templateFiles = findTemplateFiles(app);
   const schemas: TemplateSchema[] = [];
   
   for (const file of templateFiles) {

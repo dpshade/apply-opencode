@@ -95,12 +95,12 @@ export class ApplyOpenCodeSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): Promise<void> {
+  display(): void {
     const { containerEl } = this;
     containerEl.empty();
 
     // Fetch models async and update dropdown when ready
-    return this.displayWithModels(containerEl);
+    void this.displayWithModels(containerEl);
   }
 
   private async displayWithModels(containerEl: HTMLElement): Promise<void> {

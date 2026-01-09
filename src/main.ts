@@ -455,7 +455,7 @@ export default class ApplyOpenCodePlugin extends Plugin {
     try {
       const examples = await findSimilarNotes(this.app, file, content, 5);
       if (examples.length === 0) {
-          console.info(`[Apply OpenCode] No similar notes found for ${file.path}`);
+        console.debug(`[Apply OpenCode] No similar notes found for ${file.path}`);
         return false;
       }
 
