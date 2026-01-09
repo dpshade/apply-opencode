@@ -245,3 +245,123 @@
 .diff-unchanged {
   color: var(--text-muted);
 }
+
+/* Progress Modal */
+.apply-opencode-progress {
+  min-width: 400px;
+}
+
+.apply-opencode-progress h3 {
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+
+.apply-opencode-progress .progress-container {
+  height: 8px;
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.apply-opencode-progress .progress-bar {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.apply-opencode-progress .progress-status {
+  font-size: 14px;
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.apply-opencode-progress .progress-file {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 16px;
+}
+
+.apply-opencode-progress .progress-buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.apply-opencode-progress .progress-buttons button {
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Template Picker Modal */
+.template-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.template-name {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.template-path {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.template-props {
+  font-size: 11px;
+  color: var(--text-accent);
+}
+
+/* Content Input Modal - Search bar style */
+.modal.apply-opencode-content-input {
+  width: 500px;
+  max-width: 90vw;
+  padding: 0;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.modal.apply-opencode-content-input .modal-close-button {
+  display: none;
+}
+
+.modal.apply-opencode-content-input .modal-content {
+  padding: 0;
+  margin: 0;
+}
+
+.content-input-container {
+  padding: 0;
+}
+
+.content-input-field {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.content-input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.content-input-hint {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+}
