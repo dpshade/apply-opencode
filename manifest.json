@@ -1,0 +1,10 @@
+{
+  "id": "auto-frontmatter",
+  "name": "Auto Frontmatter",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Automatically manage and update frontmatter in your notes.",
+  "author": "Dylan Shade",
+  "authorUrl": "https://github.com/dps",
+  "isDesktopOnly": false
+}
