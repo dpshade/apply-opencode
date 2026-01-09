@@ -5,6 +5,7 @@
   "minAppVersion": "1.0.0",
   "description": "AI-powered frontmatter enhancement and title generation for Obsidian.",
   "author": "Dylan Shade",
-  "authorUrl": "https://github.com/dps",
+  "authorUrl": "https://github.com/dpshade",
+  "fundingUrl": "https://ko-fi.com/dpshade",
   "isDesktopOnly": true
 }
