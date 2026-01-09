@@ -103,12 +103,60 @@ interface BaseView {
   [key: string]: unknown;
 }
 
+interface FilterObject {
+  and?: unknown[];
+  or?: unknown[];
+  not?: unknown[];
+  [key: string]: unknown;
+}
+
 interface ParsedBase {
   views?: BaseView[];
-  filters?: unknown;
+  filters?: FilterObject;
   formulas?: Record<string, string>;
   properties?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+const VALID_FILTER_KEYS = ["and", "or", "not"];
+
+/**
+ * Validate that a filters object uses only and/or/not keys
+ */
+function validateFilters(filters: unknown, context: string): { valid: boolean; error?: string } {
+  if (!filters || typeof filters !== "object") {
+    return { valid: true }; // No filters is fine
+  }
+
+  const filterObj = filters as FilterObject;
+  const keys = Object.keys(filterObj);
+  
+  // Filters must have exactly one of: and, or, not
+  const validKeys = keys.filter(k => VALID_FILTER_KEYS.includes(k));
+  const invalidKeys = keys.filter(k => !VALID_FILTER_KEYS.includes(k));
+  
+  if (invalidKeys.length > 0) {
+    return { 
+      valid: false, 
+      error: `${context}: filters may only have "and", "or", or "not" keys. Found invalid keys: ${invalidKeys.join(", ")}` 
+    };
+  }
+  
+  if (validKeys.length === 0) {
+    return { 
+      valid: false, 
+      error: `${context}: filters must have one of "and", "or", or "not" keys` 
+    };
+  }
+  
+  if (validKeys.length > 1) {
+    return { 
+      valid: false, 
+      error: `${context}: filters may only have ONE of "and", "or", or "not" at the top level. Found: ${validKeys.join(", ")}` 
+    };
+  }
+
+  return { valid: true };
 }
 
 /**
@@ -127,6 +175,14 @@ export function validateBase(content: string): { valid: boolean; error?: string 
       return { valid: false, error: "Base must have a 'views' array" };
     }
 
+    // Validate top-level filters if present
+    if (parsed.filters) {
+      const filterValidation = validateFilters(parsed.filters, "Top-level filters");
+      if (!filterValidation.valid) {
+        return filterValidation;
+      }
+    }
+
     // Check each view has required fields
     for (let i = 0; i < parsed.views.length; i++) {
       const view = parsed.views[i];
@@ -135,6 +191,14 @@ export function validateBase(content: string): { valid: boolean; error?: string 
       }
       if (!["table", "cards", "list", "map"].includes(view.type)) {
         return { valid: false, error: `View ${i + 1} has invalid type: ${view.type}` };
+      }
+      
+      // Validate view-level filters if present
+      if (view.filters) {
+        const viewFilterValidation = validateFilters(view.filters, `View ${i + 1} (${view.name || view.type}) filters`);
+        if (!viewFilterValidation.valid) {
+          return viewFilterValidation;
+        }
       }
     }
 
@@ -166,14 +230,26 @@ Generate an Obsidian Base file (.base) based on this description:
 
 ${description}
 
-RULES:
+CRITICAL FILTER SYNTAX RULES:
+- Filters MUST use "and:", "or:", or "not:" as the ONLY top-level key
+- WRONG: \`filters: file.hasTag("task")\` 
+- CORRECT: \`filters:\\n  and:\\n    - file.hasTag("task")\`
+- Each condition must be a list item under and/or/not
+
+Example filter structure:
+\`\`\`yaml
+filters:
+  and:
+    - file.hasTag("task")
+    - 'file.folder != "Archive"'
+\`\`\`
+
+OUTPUT RULES:
 1. Output ONLY valid YAML for the .base file
-2. Do NOT include markdown fences (\`\`\`yaml or \`\`\`)
+2. Do NOT include markdown fences
 3. Do NOT include any explanation or commentary
-4. The output must be directly usable as a .base file
-5. Include at least one view in the views array
-6. Use appropriate filters, formulas, and properties based on the description
-7. When referencing folders, tags, or properties, use EXACT names from the vault context above
+4. Include at least one view in the views array
+5. When referencing folders, tags, or properties, use EXACT names from the vault context above
 
 Output the .base YAML content:`;
 
@@ -206,12 +282,16 @@ ${currentContent}
 
 Edit instruction: ${instruction}
 
-RULES:
+CRITICAL FILTER SYNTAX RULES:
+- Filters MUST use "and:", "or:", or "not:" as the ONLY top-level key
+- WRONG: \`filters: file.hasTag("task")\` 
+- CORRECT: \`filters:\\n  and:\\n    - file.hasTag("task")\`
+
+OUTPUT RULES:
 1. Output the complete modified .base file content
 2. Output ONLY valid YAML - no markdown fences, no explanation
 3. Preserve existing structure unless the instruction asks to change it
-4. The output must be directly usable as a .base file
-5. When referencing folders, tags, or properties, use EXACT names from the vault context above
+4. When referencing folders, tags, or properties, use EXACT names from the vault context above
 
 Output the modified .base YAML content:`;
 
