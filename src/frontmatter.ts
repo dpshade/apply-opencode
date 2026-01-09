@@ -33,9 +33,11 @@ export function mergeFrontmatter(existing: FrontmatterData, enhanced: Frontmatte
     }
 
     if (Array.isArray(existingValue) && Array.isArray(newValue)) {
-      const existingSet = new Set(existingValue.map(String));
-      const additions = newValue.filter((item) => !existingSet.has(String(item)));
-      merged[key] = [...existingValue, ...additions];
+      const existingArr = existingValue as unknown[];
+      const newArr = newValue as unknown[];
+      const existingSet = new Set(existingArr.map(String));
+      const additions = newArr.filter((item) => !existingSet.has(String(item)));
+      merged[key] = [...existingArr, ...additions];
       continue;
     }
 

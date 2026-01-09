@@ -1,55 +1,62 @@
-@keyframes afm-modal-pop {
+@keyframes aoc-modal-pop {
   0% { opacity: 0; transform: scale(0.95) translateY(10px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@keyframes afm-slide-in {
+@keyframes aoc-slide-in {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
-.auto-frontmatter-diff-modal {
-  padding: 24px;
-  max-width: 95vw;
-  width: 95vw;
-  animation: afm-modal-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+/* Style the modal itself (class applied to .modal element) */
+.modal.apply-opencode-diff-modal {
+  width: 70vw !important;
+  max-width: 900px !important;
+  padding: 12px 24px 24px 24px;
+  animation: aoc-modal-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   border-radius: 12px;
   box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-}
-
-/* Override Obsidian's default modal width constraints */
-.modal-container .modal:has(.auto-frontmatter-diff-modal) {
-  width: 95vw !important;
-  max-width: 95vw !important;
   overflow: hidden !important;
 }
 
-/* Prevent horizontal scroll on the modal content */
-.modal-content.auto-frontmatter-diff-modal {
-  overflow-x: hidden !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+/* Reset the modal-content since we style the parent */
+.modal.apply-opencode-diff-modal .modal-content {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
-.auto-frontmatter-diff-modal h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
+/* Position close button on same row as h2 */
+.modal.apply-opencode-diff-modal .modal-close-button {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+}
+
+/* H2 styling */
+.apply-opencode-diff-modal h2 {
+  margin: 0 0 16px 0;
   font-weight: 600;
   letter-spacing: -0.01em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding-right: 40px; /* Space for close button */
 }
 
-.auto-frontmatter-diff-modal h2::before {
-  content: "✨";
-  font-size: 1.2em;
-  animation: afm-modal-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+/* Diff icon in button row */
+.diff-icon {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  margin-right: auto; /* Push buttons to the right */
+}
+
+.diff-icon svg {
+  width: 32px;
+  height: 16px;
 }
 
 .diff-container {
@@ -75,6 +82,16 @@
 .diff-container [data-diffs][data-type="split"] [data-code] {
   min-width: 0 !important;
   overflow: hidden !important;
+}
+
+/* Clickable green addition lines */
+.diff-container [data-line-type="change-addition"] {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.diff-container [data-line-type="change-addition"]:hover {
+  opacity: 0.6;
 }
 
 .diff-container::-webkit-scrollbar {

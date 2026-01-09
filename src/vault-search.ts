@@ -90,8 +90,18 @@ function extractTags(content: string): string[] {
   return [...new Set(tags)];
 }
 
-export function formatExamplesForPrompt(examples: SimilarNote[]): string {
-  if (examples.length === 0) return "";
+export interface ExamplesPromptData {
+  promptText: string;
+  validProperties: string[];
+}
+
+export function formatExamplesForPrompt(examples: SimilarNote[]): ExamplesPromptData {
+  if (examples.length === 0) {
+    return { promptText: "", validProperties: [] };
+  }
+
+  // Extract unique property names from all examples
+  const validProperties = [...new Set(examples.flatMap(ex => Object.keys(ex.frontmatter)))];
 
   const formatted = examples
     .map((ex, i) => {
@@ -102,5 +112,13 @@ export function formatExamplesForPrompt(examples: SimilarNote[]): string {
     })
     .join("\n\n");
 
-  return `\nEXAMPLES OF FRONTMATTER FROM SIMILAR NOTES IN THIS VAULT:\n${formatted}\n\nUse a similar style, structure, and field names as these examples.`;
+  const promptText = `
+EXAMPLES OF FRONTMATTER FROM SIMILAR NOTES IN THIS VAULT:
+${formatted}
+
+VALID PROPERTIES (only use these): ${validProperties.join(", ")}
+
+Use a similar style, structure, and field names as these examples. Do NOT invent new property names.`;
+
+  return { promptText, validProperties };
 }
