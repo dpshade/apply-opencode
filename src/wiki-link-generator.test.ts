@@ -291,9 +291,9 @@ Meeting with Alice`;
   });
 
   it("uses identifyEntities for all-entities strategy", async () => {
-    const mockIdentify = async (): Promise<WikiLinkSpan[]> => [
+    const mockIdentify = (): Promise<WikiLinkSpan[]> => Promise.resolve([
       { start: 0, end: 5, text: "Alice" },
-    ];
+    ]);
     
     const result = await generateWikiLinks({
       content: "Alice went home",
@@ -309,9 +309,9 @@ Meeting with Alice`;
   it("validates that only brackets were added", async () => {
     // This test verifies the safety check works by using a mock that
     // returns an invalid span (text doesn't match)
-    const mockIdentify = async (): Promise<WikiLinkSpan[]> => [
+    const mockIdentify = (): Promise<WikiLinkSpan[]> => Promise.resolve([
       { start: 0, end: 5, text: "Wrong" }, // Doesn't match "Alice"
-    ];
+    ]);
     
     // Should not throw because applyWikiLinkSpans skips mismatched spans
     const result = await generateWikiLinks({
