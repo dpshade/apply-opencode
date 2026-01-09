@@ -1,10 +1,12 @@
 import { spawn } from "child_process";
 import { parseYaml } from "obsidian";
 import { getSkillManager } from "./skills";
+import { VaultContext, formatVaultContext } from "./vault-context";
 
 export interface BaseGeneratorOptions {
   opencodePath: string;
   model: string;
+  vaultContext?: VaultContext;
 }
 
 interface OpenCodeJsonEvent {
@@ -152,9 +154,12 @@ export async function generateBase(
 ): Promise<string> {
   const skillManager = getSkillManager();
   const skillContent = skillManager.getSkill("obsidian-bases");
+  const vaultContextSection = options.vaultContext ? formatVaultContext(options.vaultContext) : "";
 
   const prompt = `${skillContent}
 
+---
+${vaultContextSection}
 ---
 
 Generate an Obsidian Base file (.base) based on this description:
@@ -168,6 +173,7 @@ RULES:
 4. The output must be directly usable as a .base file
 5. Include at least one view in the views array
 6. Use appropriate filters, formulas, and properties based on the description
+7. When referencing folders, tags, or properties, use EXACT names from the vault context above
 
 Output the .base YAML content:`;
 
@@ -185,9 +191,12 @@ export async function editBase(
 ): Promise<string> {
   const skillManager = getSkillManager();
   const skillContent = skillManager.getSkill("obsidian-bases");
+  const vaultContextSection = options.vaultContext ? formatVaultContext(options.vaultContext) : "";
 
   const prompt = `${skillContent}
 
+---
+${vaultContextSection}
 ---
 
 Current .base file content:
@@ -202,6 +211,7 @@ RULES:
 2. Output ONLY valid YAML - no markdown fences, no explanation
 3. Preserve existing structure unless the instruction asks to change it
 4. The output must be directly usable as a .base file
+5. When referencing folders, tags, or properties, use EXACT names from the vault context above
 
 Output the modified .base YAML content:`;
 

@@ -1,9 +1,11 @@
 import { spawn } from "child_process";
 import { getSkillManager } from "./skills";
+import { VaultContext, formatVaultContext } from "./vault-context";
 
 export interface CanvasGeneratorOptions {
   opencodePath: string;
   model: string;
+  vaultContext?: VaultContext;
 }
 
 interface OpenCodeJsonEvent {
@@ -264,23 +266,39 @@ export async function generateCanvas(
 ): Promise<string> {
   const skillManager = getSkillManager();
   const skillContent = skillManager.getSkill("json-canvas");
+  const vaultContextSection = options.vaultContext ? formatVaultContext(options.vaultContext) : "";
 
   const prompt = `${skillContent}
 
+---
+${vaultContextSection}
 ---
 
 Generate a JSON Canvas file (.canvas) based on this description:
 
 ${description}
 
-RULES:
+CRITICAL LAYOUT RULES (prevent overlapping):
+- MINIMUM 100px vertical gap between nodes (node1.y + node1.height + 100 <= node2.y)
+- MINIMUM 100px horizontal gap between adjacent columns
+- Groups must be sized to fit ALL children with 50px padding on each side
+- Calculate group height as: sum of children heights + (100px gap × (children-1)) + 100px top/bottom padding
+- Place group label nodes INSIDE group boundaries
+- When nodes are in columns inside groups, offset each column by (column_width + 100px)
+
+SIZING GUIDELINES:
+- Text nodes with bullet lists: height = 60 + (line_count × 24)
+- Section headers: 60-80px height
+- Cards with 4-6 bullets: 200-250px height
+- Groups: calculate based on contents, never hardcode
+
+OUTPUT RULES:
 1. Output ONLY valid JSON for the .canvas file
 2. Do NOT include markdown fences (\`\`\`json or \`\`\`)
 3. Do NOT include any explanation or commentary
 4. The output must be directly usable as a .canvas file
 5. Use 16-character hexadecimal IDs for nodes and edges
-6. Follow the layout guidelines for positioning and sizing
-7. Include appropriate nodes, edges, and groups based on the description
+6. When referencing files or folders, use EXACT paths from the vault context above
 
 Output the .canvas JSON content:`;
 
@@ -306,9 +324,12 @@ export async function editCanvas(
 ): Promise<string> {
   const skillManager = getSkillManager();
   const skillContent = skillManager.getSkill("json-canvas");
+  const vaultContextSection = options.vaultContext ? formatVaultContext(options.vaultContext) : "";
 
   const prompt = `${skillContent}
 
+---
+${vaultContextSection}
 ---
 
 Current .canvas file content:
@@ -318,12 +339,20 @@ ${currentContent}
 
 Edit instruction: ${instruction}
 
-RULES:
+CRITICAL LAYOUT RULES (prevent overlapping):
+- MINIMUM 100px vertical gap between nodes
+- MINIMUM 100px horizontal gap between adjacent columns
+- Groups must be sized to fit ALL children with 50px padding on each side
+- If adding nodes, ensure they don't overlap with existing nodes
+- Recalculate group sizes if adding/removing children
+
+OUTPUT RULES:
 1. Output the complete modified .canvas file content
 2. Output ONLY valid JSON - no markdown fences, no explanation
 3. Preserve existing node/edge IDs unless removing them
 4. Generate new 16-character hex IDs for any new nodes/edges
 5. The output must be directly usable as a .canvas file
+6. When referencing files or folders, use EXACT paths from the vault context above
 
 Output the modified .canvas JSON content:`;
 

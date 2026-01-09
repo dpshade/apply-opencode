@@ -14,6 +14,8 @@ import { getSkillManager, SkillCache } from "./skills";
 import { generateBase, editBase, validateBase, suggestBaseFilename } from "./base-generator";
 import { generateCanvas, editCanvas, validateCanvas, suggestCanvasFilename } from "./canvas-generator";
 import { showFileCreateModal } from "./file-create-modal";
+import { collectVaultContext, extractKeywords } from "./vault-context";
+import { collectWeeklyNotes, generateWeeklySummary } from "./weekly-summary";
 
 interface PluginData {
   settings?: Partial<ApplyOpenCodeSettings>;
@@ -460,9 +462,16 @@ export default class ApplyOpenCodePlugin extends Plugin {
         const loadingNotice = new Notice("Generating base...", 0);
 
         try {
+          const keywords = extractKeywords(result.description);
+          const vaultContext = await collectVaultContext(this.app, undefined, {
+            keywords,
+            fileType: "base",
+            maxExamples: 3,
+          });
           const content = await generateBase(result.description, {
             opencodePath: this.settings.opencodePath,
             model: this.settings.model,
+            vaultContext,
           });
 
           loadingNotice.hide();
@@ -548,9 +557,16 @@ export default class ApplyOpenCodePlugin extends Plugin {
         const loadingNotice = new Notice("Generating canvas...", 0);
 
         try {
+          const keywords = extractKeywords(result.description);
+          const vaultContext = await collectVaultContext(this.app, undefined, {
+            keywords,
+            fileType: "canvas",
+            maxExamples: 2,
+          });
           const content = await generateCanvas(result.description, {
             opencodePath: this.settings.opencodePath,
             model: this.settings.model,
+            vaultContext,
           });
 
           loadingNotice.hide();
@@ -614,6 +630,74 @@ export default class ApplyOpenCodePlugin extends Plugin {
       },
     });
 
+    // Weekly Summary command
+    this.addCommand({
+      id: "this-weeks-summary",
+      name: "This week's summary",
+      callback: async () => {
+        const loadingNotice = new Notice("Collecting this week's notes...", 0);
+
+        try {
+          const notes = await collectWeeklyNotes(this.app);
+          
+          if (notes.length === 0) {
+            loadingNotice.hide();
+            new Notice("No notes created or modified in the past 7 days.", 8000);
+            return;
+          }
+
+          loadingNotice.setMessage(`Analyzing ${notes.length} notes...`);
+
+          const summary = await generateWeeklySummary(notes, {
+            opencodePath: this.settings.opencodePath,
+            model: this.settings.model,
+          });
+
+          loadingNotice.hide();
+
+          // Create a new note with the summary
+          const today = new Date();
+          const dateStr = today.toISOString().slice(0, 10);
+          const filename = `Weekly Summary ${dateStr}.md`;
+          
+          // Check for existing file
+          let filePath = filename;
+          const existing = this.app.vault.getAbstractFileByPath(filePath);
+          if (existing) {
+            // Add timestamp to make unique
+            const timestamp = today.toTimeString().slice(0, 5).replace(":", "");
+            filePath = `Weekly Summary ${dateStr} ${timestamp}.md`;
+          }
+
+          const content = `---
+title: Weekly Summary ${dateStr}
+created: ${today.toISOString()}
+tags: [weekly-summary]
+---
+
+# Weekly Summary: ${today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+
+${summary}
+`;
+
+          await this.app.vault.create(filePath, content);
+          
+          // Open the new file
+          const newFile = this.app.vault.getAbstractFileByPath(filePath);
+          if (newFile instanceof TFile) {
+            await this.app.workspace.getLeaf().openFile(newFile);
+          }
+
+          new Notice(`Created: ${filePath}`, 6000);
+        } catch (err) {
+          loadingNotice.hide();
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to generate summary: ${message}`, 10000);
+          console.error("[Apply OpenCode] Weekly summary error:", err);
+        }
+      },
+    });
+
     this.addSettingTab(new ApplyOpenCodeSettingTab(this.app, this));
   }
 
@@ -663,9 +747,16 @@ export default class ApplyOpenCodePlugin extends Plugin {
     const loadingNotice = new Notice("Editing base...", 0);
 
     try {
+      const keywords = extractKeywords(inputResult.instruction);
+      const vaultContext = await collectVaultContext(this.app, file, {
+        keywords,
+        fileType: "base",
+        maxExamples: 3,
+      });
       const modified = await editBase(currentContent, inputResult.instruction, {
         opencodePath: this.settings.opencodePath,
         model: this.settings.model,
+        vaultContext,
       });
 
       loadingNotice.hide();
@@ -723,9 +814,16 @@ export default class ApplyOpenCodePlugin extends Plugin {
     const loadingNotice = new Notice("Editing canvas...", 0);
 
     try {
+      const keywords = extractKeywords(inputResult.instruction);
+      const vaultContext = await collectVaultContext(this.app, file, {
+        keywords,
+        fileType: "canvas",
+        maxExamples: 2,
+      });
       const modified = await editCanvas(currentContent, inputResult.instruction, {
         opencodePath: this.settings.opencodePath,
         model: this.settings.model,
+        vaultContext,
       });
 
       loadingNotice.hide();
