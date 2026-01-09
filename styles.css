@@ -10,15 +10,18 @@
 
 /* Style the modal itself (class applied to .modal element) */
 .modal.apply-opencode-diff-modal {
-  width: 70vw !important;
-  max-width: 900px !important;
-  padding: 12px 24px 24px 24px;
-  animation: aoc-modal-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+  width: 80vw !important;
+  max-width: 1000px !important;
+  height: 85vh; /* Fixed height for better layout control */
+  padding: 24px;
+  animation: aoc-modal-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border-radius: 16px;
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   overflow: hidden !important;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
 }
 
 /* Reset the modal-content since we style the parent */
@@ -27,23 +30,35 @@
   background: transparent;
   border: none;
   box-shadow: none;
-  overflow-x: hidden;
-  max-width: 100%;
+  overflow: hidden; /* Changed from overflow-x: hidden */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
 }
 
-/* Position close button on same row as h2 */
+/* Position close button */
 .modal.apply-opencode-diff-modal .modal-close-button {
   position: absolute;
-  top: 12px;
-  right: 24px;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  opacity: 0.6;
+}
+
+.modal.apply-opencode-diff-modal .modal-close-button:hover {
+  opacity: 1;
 }
 
 /* H2 styling */
 .apply-opencode-diff-modal h2 {
-  margin: 0 0 16px 0;
+  margin: 0 0 20px 0;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  padding-right: 40px; /* Space for close button */
+  color: var(--text-normal);
+  padding-right: 40px;
+  flex-shrink: 0;
 }
 
 /* Diff icon in button row */
@@ -51,24 +66,23 @@
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  margin-right: auto; /* Push buttons to the right */
+  margin-right: auto;
 }
 
 .diff-icon svg {
-  width: 32px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
 }
 
 .diff-container {
-  border: none;
+  border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
-  margin-bottom: 24px;
-  max-height: 60vh;
+  margin-bottom: 20px;
+  flex: 1; /* Take available space */
   overflow-y: auto;
   overflow-x: hidden !important;
   width: 100%;
-  max-width: 100%;
-  background: var(--background-secondary);
+  background: var(--background-primary);
 }
 
 /* Force the @pierre/diffs element to not cause overflow */
@@ -134,68 +148,51 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 8px;
+  padding-top: 0;
+  margin-top: auto; /* Push to bottom */
+  flex-shrink: 0;
 }
 
 .diff-buttons button {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 6px;
-  font-weight: 500;
-  padding: 6px 18px;
+  font-weight: 600;
+  padding: 8px 20px;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  height: 40px;
+  font-size: 14px;
 }
 
 .diff-buttons button:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .diff-buttons button:active {
-  transform: translateY(0) scale(0.96);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .diff-buttons button.mod-cta {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
+  border: none;
 }
 
 .diff-buttons button.mod-cta:hover {
   background-color: var(--interactive-accent-hover);
 }
 
-.diff-buttons button.mod-cta::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transform: skewX(-20deg);
-  transition: 0.5s;
-}
-
-.diff-buttons button.mod-cta:hover::after {
-  left: 150%;
-  transition: 0.7s ease-in-out;
-}
-
 .diff-buttons button.mod-warning {
-  opacity: 0.8;
+  background-color: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
 }
 
 .diff-buttons button.mod-warning:hover {
-  opacity: 1;
+  color: var(--text-error);
+  border-color: var(--background-modifier-error);
   background-color: var(--background-modifier-error-hover);
-  color: var(--text-on-accent);
 }
 
 .diff-line {
@@ -321,13 +318,14 @@
 
 /* Content Input Modal - Search bar style */
 .modal.apply-opencode-content-input {
-  width: 500px;
+  width: 600px;
   max-width: 90vw;
   padding: 0;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
 }
 
 .modal.apply-opencode-content-input .modal-close-button {
@@ -340,52 +338,95 @@
 }
 
 .content-input-container {
-  padding: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.content-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--background-primary);
+  border-radius: 8px;
+  padding: 4px 0;
+}
+
+.content-input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+}
+
+.content-input-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .content-input-field {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 8px 0;
+  font-size: 18px;
+  line-height: 28px;
   border: none;
   background: transparent;
   color: var(--text-normal);
   outline: none;
-  box-sizing: border-box;
+  box-shadow: none !important;
+}
+
+.content-input-field:focus {
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .content-input-field::placeholder {
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .content-input-hint {
-  padding: 8px 16px;
+  padding: 8px 16px 12px 16px;
   font-size: 12px;
-  color: var(--text-faint);
-  background: var(--background-secondary);
-  border-top: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  display: flex;
+  justify-content: flex-end;
+  background: var(--background-primary);
 }
 
 /* Revision input in diff modal */
-.revision-container {
+.revision-wrapper {
+  margin-top: auto; /* Push to bottom if space allows */
+  margin-bottom: 20px;
+  background: var(--background-secondary-alt);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.revision-input-container {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  align-items: flex-end;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .revision-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: 14px;
+  line-height: 1.4;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   background: var(--background-primary);
   color: var(--text-normal);
   resize: none;
-  min-height: 36px;
-  max-height: 80px;
+  min-height: 42px; /* Sufficient for 2 lines usually, or 1 line + padding */
+  max-height: 120px;
   font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .revision-input::placeholder {
@@ -395,17 +436,38 @@
 .revision-input:focus {
   outline: none;
   border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
 .revision-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  background: var(--background-secondary);
 }
 
 .revision-btn {
-  padding: 8px 16px;
+  height: 42px; /* Match input height roughly */
+  padding: 0 20px;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.revision-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.revision-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  padding-right: 4px;
 }
